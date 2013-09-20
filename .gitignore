@@ -1,3 +1,5 @@
 *.[oa]
 *~
+*.pyc
 build/
+m5out/
