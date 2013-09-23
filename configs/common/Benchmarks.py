@@ -120,6 +120,7 @@ Benchmarks = {
     'bbench-ics':       [SysConfig('bbench-ics.rcS', '256MB',
                             'ARMv7a-ICS-Android.SMP.nolock.img')],
 #PRODROMOU: Adding the blackscholes benchmark
+    'ExitOnly':        [SysConfig('just_exit.rcS', '256MB')],
     'Blackscholes':        [SysConfig('blackscholes.rcS', '256MB')]
 }
 
