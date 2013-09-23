@@ -118,7 +118,9 @@ Benchmarks = {
     'ArmAndroid-ICS':   [SysConfig('null.rcS', '256MB',
                             'ARMv7a-ICS-Android.SMP.nolock.clean.img')],
     'bbench-ics':       [SysConfig('bbench-ics.rcS', '256MB',
-                            'ARMv7a-ICS-Android.SMP.nolock.img')]
+                            'ARMv7a-ICS-Android.SMP.nolock.img')],
+#PRODROMOU: Adding the blackscholes benchmark
+    'Blackscholes':        [SysConfig('blackscholes.rcS', '256MB')]
 }
 
 benchs = Benchmarks.keys()

@@ -3,3 +3,4 @@
 *.pyc
 build/
 m5out/
+m5term
