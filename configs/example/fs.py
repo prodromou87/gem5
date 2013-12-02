@@ -88,7 +88,8 @@ DriveMemClass = SimpleMemory
 TestMemClass = Simulation.setMemClass(options)
 
 #prodromou: hardcoding the kernel so I don't need to pass it every time.
-options.kernel = "x86_64-vmlinux-2.6.22.9.smp"
+if not options.kernel:
+    options.kernel = "x86_64-vmlinux-2.6.22.9.smp"
 
 
 if options.benchmark:

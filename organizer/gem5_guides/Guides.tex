@@ -1,5 +1,7 @@
 \documentclass[a4paper,12pt]{article}
 
+\usepackage{hyperref}
+
 \begin{document}
 
 \title{Research Guides}
@@ -16,7 +18,7 @@ This document is created in order to keep all the guides I come accross during m
 \section{Prepare X86 FS simulation \& Parsec}
 The required files for FS simulations can be found in the ``Download gem5'' section at www.gem5.org. All that's needed is to extract the downloaded files (kernel and images). Extracting to the default location is optimal, since there are no further modifications required (/dist/m5/system/binaries and /dist/m5/system/disks). Don't forget to change permissions for the user (or group of users) that need it (chown and chgrp commands). 
 
-When talking about X86 FS simulation, the provided image (x86root) does not include anything, which makes it harder to get started with Parsec. A pre-compiled Parsec-including image can be downloaded from $http://www.cs.utexas.edu/~parsec_m5/x86root-parsec.img.bz2$. Extract at the default folder and change file permissions. From the same websites, some scripts can be downloaded that automate the creation of some required .rcS scripts to run the benchmarks according to the user's preference.
+When talking about X86 FS simulation, the provided image (x86root) does not include anything, which makes it harder to get started with Parsec. A pre-compiled Parsec-including image can be downloaded from \url{http://www.cs.utexas.edu/~parsec_m5/x86root-parsec.img.bz2}. Extract at the default folder and change file permissions. From the same websites, some scripts can be downloaded that automate the creation of some required .rcS scripts to run the benchmarks according to the user's preference.
 
 When you have a .rcS file ready, it needs to be added in gem5/configs/boot/ folder and specify the .rcS file when initiating the simulation with the -b option. For example, if you add Blackscholes.rcS script in the boot folder, the command for running it will be $$./build/X86/gem5.fast configs/example/fs.py\ -b\ Blackscholes$$ Note that .rcS extension is not included.
 

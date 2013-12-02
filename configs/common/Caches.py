@@ -62,6 +62,17 @@ class L2Cache(BaseCache):
     tgts_per_mshr = 12
     write_buffers = 8
 
+#PRODROMOU
+class L3Cache(BaseCache):
+    assoc = 16
+    hit_latency = 40
+    response_latency = 40
+    mshrs = 40
+    tgts_per_mshr = 12
+    write_buffers = 16
+    prefetcher = TaggedPrefetcher (degree = 8, latency=1)
+#PRODROMOU
+
 class IOCache(BaseCache):
     assoc = 8
     hit_latency = 50
