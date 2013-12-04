@@ -63,6 +63,10 @@ if 'O3CPU' in env['CPU_MODELS']:
     Source('store_set.cc')
     Source('thread_context.cc')
 
+    #Prodromou: Adding new object code
+    Source('DeadInstAnalyzer.cc')
+    #Prodromou: End of code section
+
     DebugFlag('LSQ')
     DebugFlag('LSQUnit')
     DebugFlag('MemDepUnit')
@@ -72,6 +76,10 @@ if 'O3CPU' in env['CPU_MODELS']:
     DebugFlag('Scoreboard')
     DebugFlag('StoreSet')
     DebugFlag('Writeback')
+    
+    #Prodromou: Adding new debug flag
+    DebugFlag('DeadInstAnalyzer')
+    #Prodromou: End of code section
 
     CompoundFlag('O3CPUAll', [ 'Fetch', 'Decode', 'Rename', 'IEW', 'Commit',
         'IQ', 'ROB', 'FreeList', 'LSQ', 'LSQUnit', 'StoreSet', 'MemDepUnit',

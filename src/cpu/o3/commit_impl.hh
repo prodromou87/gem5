@@ -65,6 +65,8 @@
 #include "sim/faults.hh"
 #include "sim/full_system.hh"
 
+#include "cpu/o3/DeadInstAnalyzer.hh"
+
 using namespace std;
 
 template <class Impl>
@@ -1020,6 +1022,7 @@ DefaultCommit<Impl>::commitInsts()
 		//Prodromou: Instructions that reach the commit stage
 		//Prodromou: change the processor's state and disappear
 
+		DeadInstAnalyzer temp;
 
 		//Prodromou: For code understanding
 		string instInfo = "";
