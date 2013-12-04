@@ -1014,6 +1014,19 @@ DefaultCommit<Impl>::commitInsts()
             bool commit_success = commitHead(head_inst, num_committed);
 
             if (commit_success) {
+
+		//Prodromou: This looks like a good place to start 
+		//Prodromou: Implementing the dead code analyzer.
+		//Prodromou: Instructions that reach the commit stage
+		//Prodromou: change the processor's state and disappear
+
+
+		//Prodromou: For code understanding
+		string instInfo = "";
+		head_inst->dump(instInfo);
+		DPRINTF (Commit, "Prodromou: Commiting %s\n", instInfo);
+		//Prodromou: End of code section
+
                 ++num_committed;
 
                 changedROBNumEntries[tid] = true;
@@ -1039,8 +1052,12 @@ DefaultCommit<Impl>::commitInsts()
 
                 // If this is an instruction that doesn't play nicely with
                 // others squash everything and restart fetch
-                if (head_inst->isSquashAfter())
+                if (head_inst->isSquashAfter()) {
                     squashAfter(tid, head_inst);
+		    //Prodromou: For code understanding
+		    DPRINTF (Commit, "Prodromou: Strange Squash Logic Reached");
+		    //Prodromou: End of code section
+		}
 
                 if (drainPending) {
                     DPRINTF(Drain, "Draining: %i:%s\n", tid, pc[tid]);

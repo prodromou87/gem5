@@ -255,6 +255,28 @@ ROB<Impl>::retireHead(ThreadID tid)
 
     DynInstPtr head_inst = (*head_it);
 
+    // Prodromou: For code understanding
+    string wr = "";
+    string rr = "";
+    std::ostringstream s;
+    std::ostringstream s2;
+    string instInfo = "";
+    head_inst->dump(instInfo);
+    int wregs = head_inst->numDestRegs();
+    int rregs = head_inst->numSrcRegs();
+
+    DPRINTF(ROB, "Prodromou: Retiring inst with %d WRegs and %d Rregs\n", wregs, rregs);
+    
+    for (int i=0; i<wregs; i++) s<<(int)(head_inst->destRegIdx(i))<<" ";
+    wr = s.str();
+    for (int i=0; i<rregs; i++) s2<<(int)(head_inst->srcRegIdx(i))<<" ";
+    rr = s2.str();
+    DPRINTF(ROB, "Prodromou: WREGS: %s\n", wr);
+    DPRINTF(ROB, "Prodromou: RREGS: %s\n", rr);
+    DPRINTF(ROB, "Prodromou: DynInstInfo:: %s\n", instInfo);
+
+    //End of added Section for code understanding
+
     assert(head_inst->readyToCommit());
 
     DPRINTF(ROB, "[tid:%u]: Retiring head instruction, "
