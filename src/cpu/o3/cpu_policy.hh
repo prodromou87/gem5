@@ -107,6 +107,10 @@ struct SimpleCPUPolicy
     /** The struct for all backwards communication. */
     typedef TimeBufStruct<Impl> TimeStruct;
 
+    //Prodromou: typedef the Dead Instruction Analyzer
+    typedef ::DeadInstAnalyzer<Impl> DeadInstAnalyzer;
+    //Prodromou: End of code section
+
 };
 
 #endif //__CPU_O3_CPU_POLICY_HH__

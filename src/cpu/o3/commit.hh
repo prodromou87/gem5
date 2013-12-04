@@ -50,6 +50,7 @@
 #include "cpu/exetrace.hh"
 #include "cpu/inst_seq.hh"
 #include "cpu/timebuf.hh"
+#include "cpu/o3/DeadInstAnalyzer.hh"
 
 struct DerivO3CPUParams;
 
@@ -99,6 +100,10 @@ class DefaultCommit
     typedef typename CPUPol::IEW IEW;
 
     typedef O3ThreadState<Impl> Thread;
+
+    //Prodromou: Defining the Analyzer class
+    typedef typename CPUPol::DeadInstAnalyzer DeadInstAnalyzer;
+    //Prodromou: End of code section
 
     /** Event class used to schedule a squash due to a trap (fault or
      * interrupt) to happen on a specific cycle.
@@ -529,6 +534,10 @@ class DefaultCommit
     Stats::Scalar commitEligibleSamples;
     /** Number of instructions not committed due to bandwidth limits. */
     Stats::Vector commitEligible;
+
+    //Prodromou: Declaring the Deadness Analyzer object
+    DeadInstAnalyzer deadInstAnalyzer;
+    //Prodromou: End of code section
 };
 
 #endif // __CPU_O3_COMMIT_HH__

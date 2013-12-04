@@ -1,4 +1,5 @@
 #include "cpu/o3/DeadInstAnalyzer_impl.hh"
+#include "cpu/o3/isa_specific.hh"
 
-class DeadInstAnalyzer;
+template class DeadInstAnalyzer<O3CPUImpl>;
 

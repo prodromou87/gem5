@@ -3,7 +3,12 @@
 #include "arch/utility.hh"
 using namespace std;
 
-DeadInstAnalyzer::DeadInstAnalyzer() {
-    test_int = 13;
-    DPRINTF (DeadInstAnalyzer, "Object Instantiated with test int %d\n", test_int);
+template<class Impl>
+DeadInstAnalyzer<Impl>::DeadInstAnalyzer() {}
+
+template<class Impl>
+void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
+    string s;
+    newInst->dump(s);
+    DPRINTF (DeadInstAnalyzer, "Inst: %s\n", s);
 }
