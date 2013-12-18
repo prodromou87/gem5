@@ -79,6 +79,7 @@ if 'O3CPU' in env['CPU_MODELS']:
     
     #Prodromou: Adding new debug flag
     DebugFlag('DeadInstAnalyzer')
+    DebugFlag('Prodromou')
     #Prodromou: End of code section
 
     CompoundFlag('O3CPUAll', [ 'Fetch', 'Decode', 'Rename', 'IEW', 'Commit',

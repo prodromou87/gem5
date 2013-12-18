@@ -85,6 +85,7 @@ class BaseO3DynInst : public BaseDynInst<Impl>
     };
 
   public:
+
     /** BaseDynInst constructor given a binary instruction. */
     BaseO3DynInst(StaticInstPtr staticInst, StaticInstPtr macroop,
                   TheISA::PCState pc, TheISA::PCState predPC,

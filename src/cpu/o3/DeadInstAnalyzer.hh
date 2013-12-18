@@ -1,10 +1,42 @@
 #ifndef __DEAD_INST_ANALYZER_HH__
 #define __DEAD_INST_ANALYZER_HH__
 
+#include <deque>
+#include <map>
+#include <string>
+using namespace std;
+
 template<class Impl>
 class DeadInstAnalyzer {
     private:
-    
+	
+	typedef long long int UINT64;
+	
+	struct INS_STRUCT {
+	    INS_STRUCT() : ID(0), readCounter(0), OWCount(0) {};
+	    deque <INS_STRUCT*> RAW;
+	    deque <INS_STRUCT*> WAW;
+
+	    long long int ID;
+	    int WRegCount; //Number of output registers for each command
+	    int readCounter; // Number of times the output registers were read by other instructions
+	    int OWCount; // Note: Each output register (Wreg) can be overwritten by at most one instruction
+
+	    long long int address;
+	};
+
+	map <int, INS_STRUCT*> regFile; // Holds the last writer instruction for each reg
+	deque <INS_STRUCT*> instructions; // The instruction window
+
+	UINT64 globalInsCount;
+	UINT64 deadInsCounter, deadStreamCounter, totalInsCounter;
+
+	bool checkDeadness (INS_STRUCT *instruction);
+	void declareDead (INS_STRUCT *instruction);
+	void clearRegFile (INS_STRUCT *instruction);
+
+	UINT64 STREAM_WINDOW;
+
     public:
 	typedef typename Impl::DynInstPtr DynInstPtr;
 	DeadInstAnalyzer();
