@@ -36,7 +36,10 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
     node->ID = ++globalInsCount;
     node->address = newInst->instAddr();
     node->WRegCount = numW;
+    node->isMemRef = newInst->isMemRef();
+    if (newInst->isStore()) node->WRegCount=1; //Fake One output register for stores
 
+    //Print information regarding this instruction
     DPRINTF(Prodromou, "New Node: %lld\n", node->ID);
     string s;
     newInst->dump(s);
@@ -51,6 +54,7 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
     DPRINTF(Prodromou, "1: %d 2: %d 3: %d 4: %d 5: %d\n", newInst->isMemRef(), newInst->isLoad(), newInst->isStore(), newInst->isStoreConditional(), newInst->doneEACalc());
     DPRINTF(Prodromou, "Addr: %#08d, Eff. Addr: %#08d, Phys. addr: %#08d\n", newInst->instAddr(), newInst->effAddr, newInst->physEffAddr);
 
+
     // Check for room in the instruction window
     // If there is no room remove oldest instruction node
     // Also update the (virtual) register file
@@ -61,21 +65,23 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
         delete(temp_ptr);
     }
 
-    // First Step: Handle Read registers
-    for (int i=0; i<numR; i++) {
-        int regName = RregNames[i];
-
-        INS_STRUCT *conflictingIns = regFile[regName];
-        if (conflictingIns != NULL) {
-            node->RAW.push_back(conflictingIns);
-            conflictingIns->readCounter++;
-        }
+    // First Step: Handle Read registers 
+    // Reading Memory References => Load Instructions
+    if (newInst->isLoad()) {
+	long regName = newInst->effAddr;
+	DPRINTF(Prodromou, "Load Instruction. Reading From: %#08d", newInst->effAddr);
+	INS_STRUCT *conflictingIns = regFile[regName];
+	if (conflictingIns != NULL) {
+	    DPRINTF(Prodromou, "Aaaaaand... Conflict found!");
+	    node->RAW.push_back(conflictingIns);
+	    conflictingIns->readCounter++;
+	}
     }
-
     // Second Step: Handle Dest Registers
-    for (int i=0; i<numW; i++) {
-        int regName = WregNames[i];
-
+    // Writing Memory References => Store Instructions
+    else if (newInst->isStore()) {
+        // Use the address of the store/load and use that as a register's name
+        long regName = newInst->effAddr;
         INS_STRUCT *conflictingIns = regFile[regName];
         if (conflictingIns != NULL) {
             node->WAW.push_back(conflictingIns);
@@ -88,7 +94,69 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
         }
         regFile[regName] = node;
     }
+    else { //Not Load Instructions (Could be stores)
+	for (int i=0; i<numR; i++) {
+	    int regName = RregNames[i];
 
+	    INS_STRUCT *conflictingIns = regFile[regName];
+	    if (conflictingIns != NULL) {
+		node->RAW.push_back(conflictingIns);
+		conflictingIns->readCounter++;
+	    }
+	}
+	for (int i=0; i<numW; i++) {
+            int regName = WregNames[i];
+
+            INS_STRUCT *conflictingIns = regFile[regName];
+            if (conflictingIns != NULL) {
+                node->WAW.push_back(conflictingIns);
+                conflictingIns->OWCount ++;
+
+                //Marks the end of a dead code stream
+                if (checkDeadness(conflictingIns)) {
+                    deadStreamCounter ++;
+                }
+            }
+            regFile[regName] = node;
+        }
+    }
+    
+/*    
+    // Second Step: Handle Dest Registers
+    // Writing Memory References => Store Instructions
+    if (newInst->isStore()) {
+	// Use the address of the store/load and use that as a register's name
+	long regName = newInst->effAddr;
+	INS_STRUCT *conflictingIns = regFile[regName];
+        if (conflictingIns != NULL) {
+            node->WAW.push_back(conflictingIns);
+            conflictingIns->OWCount ++;
+
+            //Marks the end of a dead code stream
+            if (checkDeadness(conflictingIns)) {
+                deadStreamCounter ++;
+            }
+        }
+        regFile[regName] = node;
+    }
+    else {
+	for (int i=0; i<numW; i++) {
+	    int regName = WregNames[i];
+
+	    INS_STRUCT *conflictingIns = regFile[regName];
+	    if (conflictingIns != NULL) {
+		node->WAW.push_back(conflictingIns);
+		conflictingIns->OWCount ++;
+
+		//Marks the end of a dead code stream
+		if (checkDeadness(conflictingIns)) {
+		    deadStreamCounter ++;
+		}
+	    }
+	    regFile[regName] = node;
+	}
+    }
+*/
     // Push the instruction in the stream window
     instructions.push_back(node);
 
@@ -107,10 +175,17 @@ template<class Impl>
 void DeadInstAnalyzer<Impl>::clearRegFile(INS_STRUCT *instruction) {
     long long int id = instruction->ID;
 
-    for (typename map<int,INS_STRUCT*>::iterator it=regFile.begin(); it!=regFile.end(); ++it) {
+    for (typename map<long,INS_STRUCT*>::iterator it=regFile.begin(); it!=regFile.end(); ++it) {
         if (it->second == NULL) continue;
         if (it->second->ID == id) {
-            it->second = NULL;
+            if (!(it->second->isMemRef)) it->second = NULL;
+	    else {
+	    // If the leaving instruction is a memory reference, 
+	    // I need to delete the registers instead of just nullifying
+	    // them. This will relax the memory requirements a little
+	    // (Not all mem references kept in the regFile structure).
+		regFile.erase(it);
+	    }
         }
     }
 }

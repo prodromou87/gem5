@@ -23,9 +23,10 @@ class DeadInstAnalyzer {
 	    int OWCount; // Note: Each output register (Wreg) can be overwritten by at most one instruction
 
 	    long long int address;
+	    bool isMemRef; //Set to true if the instruction is Memory Reference (Load/Store)
 	};
 
-	map <int, INS_STRUCT*> regFile; // Holds the last writer instruction for each reg
+	map <long, INS_STRUCT*> regFile; // Holds the last writer instruction for each reg
 	deque <INS_STRUCT*> instructions; // The instruction window
 
 	UINT64 globalInsCount;
