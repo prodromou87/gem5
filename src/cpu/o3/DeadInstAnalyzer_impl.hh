@@ -13,6 +13,11 @@ DeadInstAnalyzer<Impl>::DeadInstAnalyzer() {
     totalInsCounter = 0;
 
     STREAM_WINDOW = 10;
+
+    deadInstructions = 0;
+    
+    // Register this object's statistics
+    regStats();
 }
 
 template<class Impl>
@@ -121,42 +126,7 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
         }
     }
     
-/*    
-    // Second Step: Handle Dest Registers
-    // Writing Memory References => Store Instructions
-    if (newInst->isStore()) {
-	// Use the address of the store/load and use that as a register's name
-	long regName = newInst->effAddr;
-	INS_STRUCT *conflictingIns = regFile[regName];
-        if (conflictingIns != NULL) {
-            node->WAW.push_back(conflictingIns);
-            conflictingIns->OWCount ++;
 
-            //Marks the end of a dead code stream
-            if (checkDeadness(conflictingIns)) {
-                deadStreamCounter ++;
-            }
-        }
-        regFile[regName] = node;
-    }
-    else {
-	for (int i=0; i<numW; i++) {
-	    int regName = WregNames[i];
-
-	    INS_STRUCT *conflictingIns = regFile[regName];
-	    if (conflictingIns != NULL) {
-		node->WAW.push_back(conflictingIns);
-		conflictingIns->OWCount ++;
-
-		//Marks the end of a dead code stream
-		if (checkDeadness(conflictingIns)) {
-		    deadStreamCounter ++;
-		}
-	    }
-	    regFile[regName] = node;
-	}
-    }
-*/
     // Push the instruction in the stream window
     instructions.push_back(node);
 
@@ -211,6 +181,9 @@ void DeadInstAnalyzer<Impl>::declareDead (INS_STRUCT *instruction) {
 
     deadInsCounter ++;
 
+    //For Simulator's statistics
+    ++deadInstructions;
+
     long long int currentHead = (*(instructions.begin()))->ID;
     //DECREASE THE COUNTER IN ALL RAWs
     for (typename deque<INS_STRUCT*>::iterator it=(instruction->RAW).begin(); it != (instruction->RAW).end(); ++it) {
@@ -222,7 +195,20 @@ void DeadInstAnalyzer<Impl>::declareDead (INS_STRUCT *instruction) {
     }
 }
 
+template<class Impl>
+string DeadInstAnalyzer<Impl>::name() const
+{
+    return "DeadInstAnalyzer";
+}
 
+template<class Impl>
+void DeadInstAnalyzer<Impl>::regStats() 
+{
+    deadInstructions
+	.name(name() + ".DeadInstructions")
+	.desc("Number of Dead Instructions");
+	//.prereq(deadInstructions);
+}
 
 
 

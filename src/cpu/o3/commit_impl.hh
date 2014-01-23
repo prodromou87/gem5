@@ -1010,9 +1010,21 @@ DefaultCommit<Impl>::commitInsts()
             // for syscalls.
             thread[tid]->funcExeInst++;
 
+	    //Prodromou: I need to find a way to know if commit_success 
+	    //Prodromou: WILL be true, without changing the processor's 
+	    //Prodromou: state in order to prevent dead instructions to
+	    //Prodromou: change the state of the machine.
+	    //Prodromou: Following commitHead function, these are the 
+	    //Prodromou: requirements for it to ever return true
+	    bool futureCommitSuccess = (
+		    (head_ints->getFault == NoFault) &&
+		    (head_inst->isExecuted())
+		    ); //If true, future commitHead call will return true
+
+	    //Prodromou: Call commitHead only after DeadInstAnalyzer's approval.
             // Try to commit the head instruction.
             bool commit_success = commitHead(head_inst, num_committed);
-
+	    
             if (commit_success) {
 
 		//Prodromou: This looks like a good place to start 
@@ -1025,12 +1037,19 @@ DefaultCommit<Impl>::commitInsts()
 		//Prodromou: For code understanding
 		string instInfo = "";
 		head_inst->dump(instInfo);
-		DPRINTF (Commit, "Prodromou: Commiting %s\n", instInfo);
 		//Prodromou: End of code section
 
                 ++num_committed;
 
                 changedROBNumEntries[tid] = true;
+
+		//Prodromou: This will enable the LSQ Units to commit all
+		//Prodromou: pending stores/loads at the next cycle.
+		//Prodromou: Dead stores need to be REMOVED from the LSQ 
+		//Prodromou: Units. I don't see alternative workarounds.
+		//Prodromou: It looks like I need to implement a function where I 
+		//Prodromou: pass the store instruction, it searches for it and 
+		//Prodromou: removes it. Store Queues are std::vector.		
 
                 // Set the doneSeqNum to the youngest committed instruction.
                 toIEW->commitInfo[tid].doneSeqNum = head_inst->seqNum;
@@ -1100,7 +1119,7 @@ DefaultCommit<Impl>::commitInsts()
                         "[tid:%i] [sn:%i].\n",
                         head_inst->pcState(), tid ,head_inst->seqNum);
                 break;
-            }
+            } 
         }
     }
 
@@ -1278,6 +1297,9 @@ DefaultCommit<Impl>::commitHead(DynInstPtr &head_inst, unsigned inst_num)
                         head_inst->seqNum, head_inst->pcState());
     }
 
+
+    // Prodromou: This looks like the place that changes the state
+    // Prodromou: Note that this is not where memory instructions commit.
     // Update the commit rename map
     for (int i = 0; i < head_inst->numDestRegs(); i++) {
         renameMap[tid]->setEntry(head_inst->flattenedDestRegIdx(i),

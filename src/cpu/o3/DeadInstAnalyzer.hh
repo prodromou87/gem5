@@ -4,6 +4,7 @@
 #include <deque>
 #include <map>
 #include <string>
+#include "base/statistics.hh"
 using namespace std;
 
 template<class Impl>
@@ -37,6 +38,17 @@ class DeadInstAnalyzer {
 	void clearRegFile (INS_STRUCT *instruction);
 
 	UINT64 STREAM_WINDOW;
+
+	//Functions needed to create new entries in 
+	//the list of simulation statistics
+	string name() const;
+	void regStats();
+
+	//Declare the new statistics variables and their type 
+	//from the Stats namespace. Type descriptions exist in 
+	//src/base/stats/types.hh and online at www.m5sim.org/Statistics
+	Stats::Scalar deadInstructions;
+	
 
     public:
 	typedef typename Impl::DynInstPtr DynInstPtr;
