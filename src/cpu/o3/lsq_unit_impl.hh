@@ -699,7 +699,10 @@ LSQUnit<Impl>::commitStores(InstSeqNum &youngest_inst)
                     storeQueue[store_idx].inst->pcState(),
                     storeQueue[store_idx].inst->seqNum);
 
-            storeQueue[store_idx].canWB = true;
+	    //Prodromou: Only set the canWB field to true if the instruction is not dead
+	    if (! storeQueue[store_idx].inst->isInstDead) {
+		storeQueue[store_idx].canWB = true;
+	    }
 
             ++storesToWB;
         }

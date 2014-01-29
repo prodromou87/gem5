@@ -18,6 +18,24 @@ DeadInstAnalyzer<Impl>::DeadInstAnalyzer() {
     
     // Register this object's statistics
     regStats();
+
+    //Prodromou: Delete it later
+    t = 8980;
+}
+
+template<class Impl>
+long long int DeadInstAnalyzer<Impl>::nextDead() {
+    //Should be ok for now
+    return t;
+}
+
+template<class Impl>
+void DeadInstAnalyzer<Impl>::deadInstMet() {
+    if (t==8980) t = 8993;
+    else if (t==8993) t = 8995;
+    else if (t==8995) t = 9044;
+    //else if (t==9044) t = 9077;
+    //else if (t==9077) t = 9492;
 }
 
 template<class Impl>
@@ -38,7 +56,11 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
     
     //Create new Instruction node
     INS_STRUCT *node = new INS_STRUCT;
-    node->ID = ++globalInsCount;
+
+    //Prodromou: Just a test. Make sure you verify this
+    //node->ID = ++globalInsCount;
+    node->ID = newInst->seqNum;
+
     node->address = newInst->instAddr();
     node->WRegCount = numW;
     node->isMemRef = newInst->isMemRef();

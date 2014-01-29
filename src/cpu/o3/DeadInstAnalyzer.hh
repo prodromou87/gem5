@@ -48,6 +48,9 @@ class DeadInstAnalyzer {
 	//from the Stats namespace. Type descriptions exist in 
 	//src/base/stats/types.hh and online at www.m5sim.org/Statistics
 	Stats::Scalar deadInstructions;
+
+	//Prodromou: For testing. delete it later
+	int t;
 	
 
     public:
@@ -58,5 +61,8 @@ class DeadInstAnalyzer {
 	//commit stage. Commited instructions are sent to this 
 	//function for deadness analyzis
 	void analyze(DynInstPtr newInst);
+
+	long long int nextDead();
+	void deadInstMet();
 };
 #endif // __DEAD_INST_ANALYZER_HH__

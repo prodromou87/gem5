@@ -155,6 +155,9 @@ class DefaultCommit
     /** Commit policy used in SMT mode. */
     CommitPolicy commitPolicy;
 
+    //Prodromou: Need this as a class variable
+    int nextDead;
+
   public:
     /** Construct a DefaultCommit with the given parameters. */
     DefaultCommit(O3CPU *_cpu, DerivO3CPUParams *params);

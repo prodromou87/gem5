@@ -172,6 +172,9 @@ class BaseDynInst : public RefCounted
     /** InstRecord that tracks this instructions. */
     Trace::InstRecord *traceData;
 
+    //Prodromou: To note if instruction is dead
+    bool isInstDead;
+
   protected:
     /** The result of the instruction; assumes an instruction can have many
      *  destination registers.

@@ -127,6 +127,10 @@ BaseDynInst<Impl>::initVars()
 #endif
 
     reqToVerify = NULL;
+
+    //Prodromou: Initialize instruction as not dead
+    isInstDead = false;
+
 }
 
 template <class Impl>

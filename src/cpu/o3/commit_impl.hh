@@ -61,6 +61,7 @@
 #include "debug/Drain.hh"
 #include "debug/ExecFaulting.hh"
 #include "debug/O3PipeView.hh"
+#include "debug/Prodromou.hh"
 #include "params/DerivO3CPU.hh"
 #include "sim/faults.hh"
 #include "sim/full_system.hh"
@@ -965,6 +966,8 @@ DefaultCommit<Impl>::commitInsts()
 
     DynInstPtr head_inst;
 
+    nextDead = -1;
+
     // Commit as many instructions as possible until the commit bandwidth
     // limit is reached, or it becomes impossible to commit any more.
     while (num_committed < commitWidth) {
@@ -1017,9 +1020,17 @@ DefaultCommit<Impl>::commitInsts()
 	    //Prodromou: Following commitHead function, these are the 
 	    //Prodromou: requirements for it to ever return true
 	    bool futureCommitSuccess = (
-		    (head_ints->getFault == NoFault) &&
+		    (head_inst->getFault() == NoFault) &&
 		    (head_inst->isExecuted())
 		    ); //If true, future commitHead call will return true
+
+	    if (futureCommitSuccess) {
+		nextDead = deadInstAnalyzer.nextDead();
+		if (head_inst->seqNum == nextDead)
+		    head_inst->isInstDead = true;
+		    //Prodromou: Let the analyzer know
+		    deadInstAnalyzer.deadInstMet();
+	    }
 
 	    //Prodromou: Call commitHead only after DeadInstAnalyzer's approval.
             // Try to commit the head instruction.
@@ -1045,13 +1056,7 @@ DefaultCommit<Impl>::commitInsts()
 
 		//Prodromou: This will enable the LSQ Units to commit all
 		//Prodromou: pending stores/loads at the next cycle.
-		//Prodromou: Dead stores need to be REMOVED from the LSQ 
-		//Prodromou: Units. I don't see alternative workarounds.
-		//Prodromou: It looks like I need to implement a function where I 
-		//Prodromou: pass the store instruction, it searches for it and 
-		//Prodromou: removes it. Store Queues are std::vector.		
-
-                // Set the doneSeqNum to the youngest committed instruction.
+		// Set the doneSeqNum to the youngest committed instruction.
                 toIEW->commitInfo[tid].doneSeqNum = head_inst->seqNum;
 
                 if (tid == 0) {
@@ -1059,7 +1064,7 @@ DefaultCommit<Impl>::commitInsts()
                                            ((THE_ISA != ALPHA_ISA) ||
                                              (!(pc[0].instAddr() & 0x3)));
                 }
-
+ 
                 // Updates misc. registers.
                 head_inst->updateMiscRegs();
 
@@ -1114,7 +1119,18 @@ DefaultCommit<Impl>::commitInsts()
                    (!head_inst->isMicroop() || head_inst->isLastMicroop()) &&
                    cpu->checkInterrupts(cpu->tcBase(0)))
                     squashAfter(tid, head_inst);
-            } else {
+            } 
+	    else if (head_inst->isInstDead) {
+		//Prodromou: FutureCommitSuccess predicted commiting, 
+		//Prodromou: but instruction didn't. This only happens 
+		//Prodromou: when instructions are dead.
+
+		//Prodromou: Need to do some book-keeping here to ensure 
+		//Prodromou: simulation's progress.
+		changedROBNumEntries[tid] = true;
+                TheISA::advancePC(pc[tid], head_inst->staticInst);
+	    }
+	    else {
                 DPRINTF(Commit, "Unable to commit head instruction PC:%s "
                         "[tid:%i] [sn:%i].\n",
                         head_inst->pcState(), tid ,head_inst->seqNum);
@@ -1300,11 +1316,22 @@ DefaultCommit<Impl>::commitHead(DynInstPtr &head_inst, unsigned inst_num)
 
     // Prodromou: This looks like the place that changes the state
     // Prodromou: Note that this is not where memory instructions commit.
-    // Update the commit rename map
-    for (int i = 0; i < head_inst->numDestRegs(); i++) {
-        renameMap[tid]->setEntry(head_inst->flattenedDestRegIdx(i),
-                                 head_inst->renamedDestRegIdx(i));
+    if (! head_inst->isInstDead) {
+	// Update the commit rename map
+	for (int i = 0; i < head_inst->numDestRegs(); i++) {
+	    renameMap[tid]->setEntry(head_inst->flattenedDestRegIdx(i),
+				     head_inst->renamedDestRegIdx(i));
+	}
     }
+    else {
+	//Prodromou: Remove the dead instruction
+	rob->retireHead(tid);
+
+	DPRINTF(Prodromou, "Stopped Dead Instruction [sn:%lli] [id:%lli] from commiting\n", head_inst->seqNum, nextDead);
+
+	return false;
+    }
+
 
     // Finally clear the head ROB entry.
     rob->retireHead(tid);
@@ -1316,8 +1343,10 @@ DefaultCommit<Impl>::commitHead(DynInstPtr &head_inst, unsigned inst_num)
 #endif
 
     // If this was a store, record it for this cycle.
-    if (head_inst->isStore())
-        committedStores[tid] = true;
+    if (head_inst->isStore()) {
+	// Prodromou: This should still be correct. Can check this for verification.
+        committedStores[tid] = true; 
+    }
 
     // Return true to indicate that we have committed an instruction.
     return true;
