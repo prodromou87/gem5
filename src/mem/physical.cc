@@ -55,6 +55,7 @@
 #include "debug/Checkpoint.hh"
 #include "mem/abstract_mem.hh"
 #include "mem/physical.hh"
+#include "debug/Prodromou.hh"
 
 using namespace std;
 
@@ -246,6 +247,7 @@ PhysicalMemory::access(PacketPtr pkt)
     AddrRangeMap<AbstractMemory*>::const_iterator m = addrMap.find(addr);
     assert(m != addrMap.end());
     m->second->access(pkt);
+    DPRINTF (Prodromou, "PHYS: Normal access\n");
 }
 
 void
@@ -256,6 +258,7 @@ PhysicalMemory::functionalAccess(PacketPtr pkt)
     AddrRangeMap<AbstractMemory*>::const_iterator m = addrMap.find(addr);
     assert(m != addrMap.end());
     m->second->functionalAccess(pkt);
+    DPRINTF (Prodromou, "PHYS: Functional access\n");
 }
 
 void

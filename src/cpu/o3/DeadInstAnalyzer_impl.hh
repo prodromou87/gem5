@@ -2,40 +2,55 @@
 #include "debug/DeadInstAnalyzer.hh"
 #include "debug/Prodromou.hh"
 #include "arch/utility.hh"
+#include <fstream>
+
+#define SIZE 33
+
 using namespace std;
 
 template<class Impl>
 DeadInstAnalyzer<Impl>::DeadInstAnalyzer() {
+
     //Initialize Variables
     globalInsCount = 0;
     deadInsCounter=0;
     deadStreamCounter = 0;
     totalInsCounter = 0;
 
-    STREAM_WINDOW = 10;
+    STREAM_WINDOW = 100000;
 
     deadInstructions = 0;
     
     // Register this object's statistics
     regStats();
 
+    deadInstructionsList = new long long int [SIZE];
+    
+    ifstream input;
+    input.open("/tmp/sorted_dead.txt");
+
+    for (int i=0; i<SIZE; i++) {
+	input >> deadInstructionsList[i];
+    }
+
+    for (int i=0; i<SIZE; i++) 
+	DPRINTF(DeadInstAnalyzer,"LIST: %lli\n", deadInstructionsList[i]);
+
     //Prodromou: Delete it later
-    t = 8980;
+    t = 0;
 }
 
 template<class Impl>
 long long int DeadInstAnalyzer<Impl>::nextDead() {
     //Should be ok for now
-    return t;
+    return -1;
+    return deadInstructionsList[t];
 }
 
 template<class Impl>
 void DeadInstAnalyzer<Impl>::deadInstMet() {
-    if (t==8980) t = 8993;
-    else if (t==8993) t = 8995;
-    else if (t==8995) t = 9044;
-    //else if (t==9044) t = 9077;
-    //else if (t==9077) t = 9492;
+    t++;
+    t = t % SIZE;
 }
 
 template<class Impl>
@@ -96,10 +111,10 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
     // Reading Memory References => Load Instructions
     if (newInst->isLoad()) {
 	long regName = newInst->effAddr;
-	DPRINTF(Prodromou, "Load Instruction. Reading From: %#08d", newInst->effAddr);
+	DPRINTF(Prodromou, "Load Instruction. Reading From: %#08d\n", newInst->effAddr);
 	INS_STRUCT *conflictingIns = regFile[regName];
 	if (conflictingIns != NULL) {
-	    DPRINTF(Prodromou, "Aaaaaand... Conflict found!");
+	    DPRINTF(Prodromou, "Aaaaaand... Conflict found!\n");
 	    node->RAW.push_back(conflictingIns);
 	    conflictingIns->readCounter++;
 	}
@@ -120,6 +135,9 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
             }
         }
         regFile[regName] = node;
+
+	checkForSilent(newInst);
+
     }
     else { //Not Load Instructions (Could be stores)
 	for (int i=0; i<numR; i++) {
@@ -231,6 +249,59 @@ void DeadInstAnalyzer<Impl>::regStats()
 	.desc("Number of Dead Instructions");
 	//.prereq(deadInstructions);
 }
+
+
+template<class Impl>
+void DeadInstAnalyzer<Impl>::checkForSilent (DynInstPtr newInst) {
+    DPRINTF (DeadInstAnalyzer, "Analyzing instruction [sn:%lld] for silent store\n", newInst->seqNum);
+
+    //Request *req = newInst->createRequest();
+    //req->setPaddr(newInst->physEffAddr);
+
+    Addr effAddr = newInst->physEffAddr; ///effAddr
+    int size = newInst->effSize;   
+    uint8_t *temp = new uint8_t[size]; 
+    Request::Flags flags;
+
+    Request *req = new Request(effAddr, size, flags, newInst->masterId());
+    DPRINTF (DeadInstAnalyzer, "Request Created. Creating Packet\n");
+
+    PacketPtr data_pkt = new Packet(req, MemCmd::ReadReq);
+    data_pkt->dataStatic(temp); //newInst->memData);
+    
+    DPRINTF (DeadInstAnalyzer, "Packet Created. Performing functional Access\n");
+    (cpu->system->getPhysMem()).functionalAccess(data_pkt);
+
+    delete[] temp;
+
+    //uint64_t temp2 = data_pkt->get<uint64_t>();
+    ostringstream o;
+    o<<data_pkt->get<uint8_t>();
+    string str = o.str();
+
+    ostringstream t;
+    t<<newInst->memData;
+    string str2 = t.str();
+
+    DPRINTF (DeadInstAnalyzer, "Functional Access returned: %s 2:%s\n", str, str2);
+    
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

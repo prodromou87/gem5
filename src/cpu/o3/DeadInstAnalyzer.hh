@@ -5,11 +5,17 @@
 #include <map>
 #include <string>
 #include "base/statistics.hh"
+#include "mem/request.hh"
+#include "mem/physical.hh"
+#include "mem/packet.hh"
 using namespace std;
 
 template<class Impl>
 class DeadInstAnalyzer {
     private:
+
+	typedef typename Impl::O3CPU O3CPU;
+	O3CPU *cpu;
 	
 	typedef long long int UINT64;
 	
@@ -51,11 +57,15 @@ class DeadInstAnalyzer {
 
 	//Prodromou: For testing. delete it later
 	int t;
-	
+
+	//Prodromou: List to hold all dead Instructions
+	long long int *deadInstructionsList;	
 
     public:
 	typedef typename Impl::DynInstPtr DynInstPtr;
 	DeadInstAnalyzer();
+
+	void setCpu (O3CPU *cpu_ptr) { cpu = cpu_ptr; }
 
 	//The connecting function between the Analyzer and the 
 	//commit stage. Commited instructions are sent to this 
@@ -64,5 +74,7 @@ class DeadInstAnalyzer {
 
 	long long int nextDead();
 	void deadInstMet();
+
+	void checkForSilent (DynInstPtr newInst);
 };
 #endif // __DEAD_INST_ANALYZER_HH__

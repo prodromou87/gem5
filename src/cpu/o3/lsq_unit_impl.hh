@@ -53,6 +53,7 @@
 #include "debug/IEW.hh"
 #include "debug/LSQUnit.hh"
 #include "debug/O3PipeView.hh"
+#include "debug/Prodromou.hh"
 #include "mem/packet.hh"
 #include "mem/request.hh"
 
@@ -370,6 +371,7 @@ template <class Impl>
 void
 LSQUnit<Impl>::insertStore(DynInstPtr &store_inst)
 {
+
     // Make sure it is not full before inserting an instruction.
     assert((storeTail + 1) % SQEntries != storeHead);
     assert(stores < SQEntries);
@@ -699,9 +701,21 @@ LSQUnit<Impl>::commitStores(InstSeqNum &youngest_inst)
                     storeQueue[store_idx].inst->pcState(),
                     storeQueue[store_idx].inst->seqNum);
 
-	    //Prodromou: Only set the canWB field to true if the instruction is not dead
-	    if (! storeQueue[store_idx].inst->isInstDead) {
-		storeQueue[store_idx].canWB = true;
+	    storeQueue[store_idx].canWB = true;
+
+	    //Prodromou: Attempt to get the value of the store's mem location.
+	    //1. get/copy the packet -- I need to CREATE a packet here
+	    //2. Call PhysicalMemory -> functional access
+
+	    //(cpu->system->getPhysMem()).functionalAccess(NULL);
+
+	    //3. Figure out how to use the response.
+	    
+
+	    
+	    if (storeQueue[store_idx].inst->isInstDead) {
+		DPRINTF(Prodromou, "Prevented store from commiting [sn: %lli]\n", storeQueue[store_idx].inst->seqNum);
+		storeQueue[store_idx].size = 0;
 	    }
 
             ++storesToWB;

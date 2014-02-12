@@ -151,6 +151,10 @@ DefaultCommit<Impl>::DefaultCommit(O3CPU *_cpu, DerivO3CPUParams *params)
         squashAfterInst[tid] = NULL;
     }
     interrupt = NoFault;
+
+    //Prodromou: Send the cpu pointer to the deadInstAnalyzer
+    deadInstAnalyzer.setCpu(_cpu);
+
 }
 
 template <class Impl>
@@ -1019,6 +1023,7 @@ DefaultCommit<Impl>::commitInsts()
 	    //Prodromou: change the state of the machine.
 	    //Prodromou: Following commitHead function, these are the 
 	    //Prodromou: requirements for it to ever return true
+	    
 	    bool futureCommitSuccess = (
 		    (head_inst->getFault() == NoFault) &&
 		    (head_inst->isExecuted())
@@ -1026,10 +1031,12 @@ DefaultCommit<Impl>::commitInsts()
 
 	    if (futureCommitSuccess) {
 		nextDead = deadInstAnalyzer.nextDead();
-		if (head_inst->seqNum == nextDead)
+		if (head_inst->seqNum == nextDead) {
+		    DPRINTF(Prodromou,"Declaring Instruction dead [sn: %lli]\n",head_inst->seqNum);
 		    head_inst->isInstDead = true;
-		    //Prodromou: Let the analyzer know
+		    //Prodromou: Let the analyzer know to progress its State Machine
 		    deadInstAnalyzer.deadInstMet();
+		}
 	    }
 
 	    //Prodromou: Call commitHead only after DeadInstAnalyzer's approval.
@@ -1127,8 +1134,11 @@ DefaultCommit<Impl>::commitInsts()
 
 		//Prodromou: Need to do some book-keeping here to ensure 
 		//Prodromou: simulation's progress.
+                toIEW->commitInfo[tid].doneSeqNum = head_inst->seqNum;
 		changedROBNumEntries[tid] = true;
+                cpu->traceFunctions(pc[tid].instAddr());
                 TheISA::advancePC(pc[tid], head_inst->staticInst);
+                lastCommitedSeqNum[tid] = head_inst->seqNum;
 	    }
 	    else {
                 DPRINTF(Commit, "Unable to commit head instruction PC:%s "
@@ -1318,6 +1328,7 @@ DefaultCommit<Impl>::commitHead(DynInstPtr &head_inst, unsigned inst_num)
     // Prodromou: Note that this is not where memory instructions commit.
     if (! head_inst->isInstDead) {
 	// Update the commit rename map
+	DPRINTF (Prodromou, "Instruction [sn:%lli] updating %d registers, #%d -> #%d\n", head_inst->seqNum, head_inst->numDestRegs(), head_inst->flattenedDestRegIdx(0), head_inst->renamedDestRegIdx(0));
 	for (int i = 0; i < head_inst->numDestRegs(); i++) {
 	    renameMap[tid]->setEntry(head_inst->flattenedDestRegIdx(i),
 				     head_inst->renamedDestRegIdx(i));
@@ -1327,7 +1338,7 @@ DefaultCommit<Impl>::commitHead(DynInstPtr &head_inst, unsigned inst_num)
 	//Prodromou: Remove the dead instruction
 	rob->retireHead(tid);
 
-	DPRINTF(Prodromou, "Stopped Dead Instruction [sn:%lli] [id:%lli] from commiting\n", head_inst->seqNum, nextDead);
+	DPRINTF(Prodromou, "Prevented Dead Instruction [sn:%lli] [id:%lli] from commiting\n", head_inst->seqNum, nextDead);
 
 	return false;
     }

@@ -65,6 +65,9 @@
 #include "mem/request.hh"
 #include "sim/core.hh"
 
+#include <iostream>
+using namespace std;
+
 class Packet;
 typedef Packet *PacketPtr;
 typedef uint8_t* PacketDataPtr;
