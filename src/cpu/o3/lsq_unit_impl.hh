@@ -1175,6 +1175,28 @@ LSQUnit<Impl>::completeStore(int store_idx)
     if (cpu->checker) {
         cpu->checker->verify(storeQueue[store_idx].inst);
     }
+
+/*	
+	//Prodromou: Just testing the memory location for data
+
+	DynInstPtr inst = storeQueue[store_idx].inst;	
+	Addr effAddr = inst->physEffAddr; ///effAddr
+	int size = inst->effSize;   
+	uint64_t *temp = new uint64_t[size]; 
+	Request::Flags flags;
+	Request *requ = new Request(effAddr, 8, flags, inst->masterId());
+
+
+	PacketPtr data_pkt2 = new Packet(requ, MemCmd::ReadReq);
+	data_pkt2->dataStatic(temp); //newInst->memData);
+	//(cpu->system->getPhysMem()).functionalAccess(data_pkt2);
+	cpu->getDataPort().sendFunctional(data_pkt2);
+	if (inst->srcRegIdx(0) < 10)
+	    DPRINTF (LSQUnit, "Prodromou: New request: Address:%#x, packet_data:%#x inst_data:%#x reg_data:%#x size:%lld [sn:%lli]\n", requ->getPaddr(), *(data_pkt2->getPtr<uint64_t>()), (int)*(inst->memData), inst->cpu->readArchIntReg((int)(inst->srcRegIdx(0)), lsqID), effAddr, inst->seqNum); 
+
+	delete[] temp;
+*/
+
 }
 
 template <class Impl>

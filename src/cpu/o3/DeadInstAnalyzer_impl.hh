@@ -94,7 +94,7 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
     if (numR>0) DPRINTF(Prodromou, "Reads from: %s, %d\n", s2.str(), newInst->cpu->readIntReg(RregNames[0]));
     else DPRINTF(Prodromou, "Reads from: %s\n", s2.str());
     DPRINTF(Prodromou, "1: %d 2: %d 3: %d 4: %d 5: %d\n", newInst->isMemRef(), newInst->isLoad(), newInst->isStore(), newInst->isStoreConditional(), newInst->doneEACalc());
-    DPRINTF(Prodromou, "Addr: %#08d, Eff. Addr: %#08d, Phys. addr: %#08d\n", newInst->instAddr(), newInst->effAddr, newInst->physEffAddr);
+    DPRINTF(Prodromou, "Addr: %#x, Eff. Addr: %#x, Phys. addr: %#x\n", newInst->instAddr(), newInst->effAddr, newInst->physEffAddr);
 
 
     // Check for room in the instruction window
@@ -253,63 +253,38 @@ void DeadInstAnalyzer<Impl>::regStats()
 
 template<class Impl>
 void DeadInstAnalyzer<Impl>::checkForSilent (DynInstPtr newInst) {
+
     DPRINTF (DeadInstAnalyzer, "Analyzing instruction [sn:%lld] for silent store\n", newInst->seqNum);
 
-    //Request *req = newInst->createRequest();
-    //req->setPaddr(newInst->physEffAddr);
-
-    Addr effAddr = newInst->physEffAddr; ///effAddr
+    Addr effAddr = newInst->physEffAddr;
     int size = newInst->effSize;   
-    uint8_t *temp = new uint8_t[size]; 
+    uint64_t *temp = new uint64_t; 
     Request::Flags flags;
 
-    Request *req = new Request(effAddr, size, flags, newInst->masterId());
+    Request *req = new Request(effAddr, 8, flags, newInst->masterId()); //Always ask for size 8 and mask later
     DPRINTF (DeadInstAnalyzer, "Request Created. Creating Packet\n");
 
     PacketPtr data_pkt = new Packet(req, MemCmd::ReadReq);
-    data_pkt->dataStatic(temp); //newInst->memData);
+    data_pkt->dataStatic(temp);
     
     DPRINTF (DeadInstAnalyzer, "Packet Created. Performing functional Access\n");
-    (cpu->system->getPhysMem()).functionalAccess(data_pkt);
+    cpu->getDataPort().sendFunctional(data_pkt);
 
-    delete[] temp;
-
-    //uint64_t temp2 = data_pkt->get<uint64_t>();
-    ostringstream o;
-    o<<data_pkt->get<uint8_t>();
-    string str = o.str();
-
-    ostringstream t;
-    t<<newInst->memData;
-    string str2 = t.str();
-
-    DPRINTF (DeadInstAnalyzer, "Functional Access returned: %s 2:%s\n", str, str2);
+    uint64_t mask = pow(2,size*4)-1; // *4 to convert size in bits
+    uint64_t mem_data = data_pkt->get<uint64_t>();
+    uint64_t useful_data = mem_data & mask;
+    uint64_t reg_data = -1234;
+    if ((int)(newInst->srcRegIdx(0) < 10)) {  //todo: fix this
+	reg_data = cpu->readArchIntReg((int)(newInst->srcRegIdx(0)), newInst->threadNumber);
+    }
+	
+    DPRINTF (DeadInstAnalyzer, "[sn:%lld] Functional Access returned: address:%#x size:%d mem_data:%#x useful_data:%#x reg_data:%#x\n", newInst->seqNum, req->getPaddr(), size, mem_data, useful_data, reg_data);
+    if (useful_data == reg_data) {
+	DPRINTF (DeadInstAnalyzer, "[sn:%lli] Silent store. Instruction Dead\n", newInst->seqNum);
+    }
     
-
+    delete[] temp;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

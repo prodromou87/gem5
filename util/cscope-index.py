@@ -34,7 +34,7 @@
 import os
 
 # absolute paths to skip
-skipdirs = [ 'src/unittest', 'src/doxygen' ]
+skipdirs = [ 'src/unittest', 'src/doxygen', 'src/cpu/inorder', 'src/cpu/ozone', 'src/cpu/simple', 'src/arch/arm', 'src/arch/mips', 'src/arch/sparc', 'src/arch/x86', 'src/arch/power' ]
 
 # suffixes of files to index
 suffixes = [ '.cc', '.hh', '.c', '.h' ]
