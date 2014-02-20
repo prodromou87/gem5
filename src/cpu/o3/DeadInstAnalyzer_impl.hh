@@ -274,11 +274,17 @@ void DeadInstAnalyzer<Impl>::checkForSilent (DynInstPtr newInst) {
     uint64_t mem_data = data_pkt->get<uint64_t>();
     uint64_t useful_data = mem_data & mask;
     uint64_t reg_data = -1234;
-    if ((int)(newInst->srcRegIdx(0) < 10)) {  //todo: fix this
-	reg_data = cpu->readArchIntReg((int)(newInst->srcRegIdx(0)), newInst->threadNumber);
+    int reg_id = (int)(newInst->srcRegIdx(0));
+
+    if ( reg_id < TheISA::NumIntRegs) {
+	reg_data = cpu->readArchIntReg(reg_id, newInst->threadNumber);
     }
+    else { //Float
+	reg_data = cpu->readArchFloatRegInt(reg_id, newInst->threadNumber);
+    }
+    assert (reg_data != -1234); //This could actually happen within a program
 	
-    DPRINTF (DeadInstAnalyzer, "[sn:%lld] Functional Access returned: address:%#x size:%d mem_data:%#x useful_data:%#x reg_data:%#x\n", newInst->seqNum, req->getPaddr(), size, mem_data, useful_data, reg_data);
+    DPRINTF (DeadInstAnalyzer, "[sn:%lld] Functional Access returned: address:%#x size:%d mem_data:%#x useful_data:%#x reg_data:%#x reg_data(fl):%lf\n", newInst->seqNum, req->getPaddr(), size, mem_data, useful_data, reg_data, (double)(reg_data));
     if (useful_data == reg_data) {
 	DPRINTF (DeadInstAnalyzer, "[sn:%lli] Silent store. Instruction Dead\n", newInst->seqNum);
     }

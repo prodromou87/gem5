@@ -1191,8 +1191,10 @@ LSQUnit<Impl>::completeStore(int store_idx)
 	data_pkt2->dataStatic(temp); //newInst->memData);
 	//(cpu->system->getPhysMem()).functionalAccess(data_pkt2);
 	cpu->getDataPort().sendFunctional(data_pkt2);
-	if (inst->srcRegIdx(0) < 10)
+	if (inst->srcRegIdx(0) < TheISA::NumIntRegs)
 	    DPRINTF (LSQUnit, "Prodromou: New request: Address:%#x, packet_data:%#x inst_data:%#x reg_data:%#x size:%lld [sn:%lli]\n", requ->getPaddr(), *(data_pkt2->getPtr<uint64_t>()), (int)*(inst->memData), inst->cpu->readArchIntReg((int)(inst->srcRegIdx(0)), lsqID), effAddr, inst->seqNum); 
+	else 
+	    DPRINTF (LSQUnit, "Prodromou: New request: Address:%#x, packet_data:%#x inst_data:%#x reg_data:%#x size:%lld [sn:%lli]\n", requ->getPaddr(), *(data_pkt2->getPtr<uint64_t>()), (int)*(inst->memData), inst->cpu->readArchFloatRegInt((int)(inst->srcRegIdx(0)), lsqID), effAddr, inst->seqNum); 
 
 	delete[] temp;
 */

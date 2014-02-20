@@ -8,6 +8,7 @@
 #include "mem/request.hh"
 #include "mem/physical.hh"
 #include "mem/packet.hh"
+#include "config/the_isa.hh"
 using namespace std;
 
 template<class Impl>
