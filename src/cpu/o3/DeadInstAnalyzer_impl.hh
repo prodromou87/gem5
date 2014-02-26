@@ -97,6 +97,49 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
     DPRINTF(Prodromou, "Addr: %#x, Eff. Addr: %#x, Phys. addr: %#x\n", newInst->instAddr(), newInst->effAddr, newInst->physEffAddr);
 
 
+    int reg_id = (int)(newInst->destRegIdx(0));
+    uint64_t res=-1234;
+    double res_dbl=-1234;
+    bool isResInt = true;
+    uint64_t reg_data;
+
+    //Prodromou: Verified: readArchIntReg reads the 
+    //Prodromou: RENAMED register, readIntReg reads 
+    //Prodromou: the ISA register. Same applies for Float regs
+    //Prodromou: readFloatRegInt returns the float number
+    //Prodromou: in a uint64_t version (Just interpreting bits)
+    
+    if (numW > 0) {
+	if (reg_id < TheISA::NumIntRegs) {
+	    newInst->readResult(res);
+	    DPRINTF(Prodromou, "Reading int reg %d and checking for deadness\n", reg_id);
+	    reg_data = cpu->readIntReg(reg_id);
+	}
+	else if (reg_id - TheISA::NumFloatRegs < TheISA::NumIntRegs + TheISA::NumFloatRegs) {
+	    reg_data = cpu->readFloatRegInt(reg_id);
+	    newInst->readResult(res_dbl);
+	    isResInt = false;
+	}
+	else 
+	    DPRINTF (Prodromou, "Some sort of special register\n");
+    }
+
+    if (res == reg_data) {
+	DPRINTF (Prodromou, "[sn:%lli] Silent register write (int). Instruction Dead\n", newInst->seqNum);
+    }
+    else if (res_dbl == reg_data) {
+	DPRINTF (Prodromou, "[sn:%lli] Silent register write (float). Instruction Dead\n", newInst->seqNum);
+    }
+
+   
+    if (isResInt) { 
+	DPRINTF(Prodromou, "[sn:%lli] Current Instruction Result:%#x, reg_data:%#x\n", newInst->seqNum, res, reg_data);
+    }
+    else {
+	DPRINTF(Prodromou, "[sn:%lli] Current Instruction Float Result:%#x, reg_data:%#x\n", newInst->seqNum, res_dbl, reg_data);
+    }
+
+
     // Check for room in the instruction window
     // If there is no room remove oldest instruction node
     // Also update the (virtual) register file
@@ -283,9 +326,10 @@ void DeadInstAnalyzer<Impl>::checkForSilent (DynInstPtr newInst) {
 	reg_data = cpu->readArchFloatRegInt(reg_id, newInst->threadNumber);
     }
     assert (reg_data != -1234); //This could actually happen within a program
+    uint64_t reg_useful_data = reg_data & mask;
 	
-    DPRINTF (DeadInstAnalyzer, "[sn:%lld] Functional Access returned: address:%#x size:%d mem_data:%#x useful_data:%#x reg_data:%#x reg_data(fl):%lf\n", newInst->seqNum, req->getPaddr(), size, mem_data, useful_data, reg_data, (double)(reg_data));
-    if (useful_data == reg_data) {
+    DPRINTF (DeadInstAnalyzer, "[sn:%lld] Functional Access returned: address:%#x size:%d mem_data:%#x useful_data:%#x reg_data:%#x reg_useful_data:%lf\n", newInst->seqNum, req->getPaddr(), size, mem_data, useful_data, reg_data, reg_useful_data);
+    if (useful_data == reg_useful_data) {
 	DPRINTF (DeadInstAnalyzer, "[sn:%lli] Silent store. Instruction Dead\n", newInst->seqNum);
     }
     
