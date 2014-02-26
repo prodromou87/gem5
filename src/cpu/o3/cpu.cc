@@ -260,6 +260,10 @@ FullO3CPU<Impl>::FullO3CPU(DerivO3CPUParams *params)
       drainManager(NULL),
       lastRunningCycle(curCycle())
 {
+
+    numPhysIntRegs = params->numPhysIntRegs;
+    numPhysFloatRegs = params->numPhysFloatRegs;
+
     if (!params->switched_out) {
         _status = Running;
     } else {

@@ -9,6 +9,7 @@
 #include "mem/physical.hh"
 #include "mem/packet.hh"
 #include "config/the_isa.hh"
+#include "arch/utility.hh"
 using namespace std;
 
 template<class Impl>
@@ -16,6 +17,7 @@ class DeadInstAnalyzer {
     private:
 
 	typedef typename Impl::O3CPU O3CPU;
+	typedef typename Impl::DynInstPtr DynInstPtr;
 	O3CPU *cpu;
 	
 	typedef long long int UINT64;
@@ -43,6 +45,21 @@ class DeadInstAnalyzer {
 	bool checkDeadness (INS_STRUCT *instruction);
 	void declareDead (INS_STRUCT *instruction);
 	void clearRegFile (INS_STRUCT *instruction);
+	void printNodeInfo (INS_STRUCT *node, 
+			    DynInstPtr newInst,
+			    int numW, int numR,
+			    int *WregNames,
+			    int * Rregnames);
+
+	void analyzeDeadMemRef (INS_STRUCT *node, DynInstPtr newInst);
+	void analyzeDeadRegOverwrite (INS_STRUCT *node, 
+				      DynInstPtr newInst,
+				      int numW, int numR,
+				      int *WregNames,
+				      int *RregNames);
+
+	void analyzeRegSameValueOverwrite (INS_STRUCT *node, DynInstPtr newInst, int numW);
+	void checkForSilentStore (INS_STRUCT *node, DynInstPtr newInst);
 
 	UINT64 STREAM_WINDOW;
 
@@ -54,16 +71,19 @@ class DeadInstAnalyzer {
 	//Declare the new statistics variables and their type 
 	//from the Stats namespace. Type descriptions exist in 
 	//src/base/stats/types.hh and online at www.m5sim.org/Statistics
+	Stats::Scalar totalInstructions;
 	Stats::Scalar deadInstructions;
+	Stats::Scalar silentStores;
+	Stats::Scalar silentRegs;
+	Stats::Scalar overStores;
+	Stats::Scalar overRegs;
 
-	//Prodromou: For testing. delete it later
-	int t;
-
+	int nextDeadIns;
+	
 	//Prodromou: List to hold all dead Instructions
 	long long int *deadInstructionsList;	
 
     public:
-	typedef typename Impl::DynInstPtr DynInstPtr;
 	DeadInstAnalyzer();
 
 	void setCpu (O3CPU *cpu_ptr) { cpu = cpu_ptr; }
@@ -76,6 +96,5 @@ class DeadInstAnalyzer {
 	long long int nextDead();
 	void deadInstMet();
 
-	void checkForSilent (DynInstPtr newInst);
 };
 #endif // __DEAD_INST_ANALYZER_HH__

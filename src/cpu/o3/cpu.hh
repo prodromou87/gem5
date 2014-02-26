@@ -848,6 +848,10 @@ class FullO3CPU : public BaseO3CPU
     //number of misc
     Stats::Scalar miscRegfileReads;
     Stats::Scalar miscRegfileWrites;
+
+    //Prodromou: Saving some information to be used by the DeadInstAnalyzer.
+    //Prodromou: The CPU object doesn't really need these
+    int numPhysIntRegs, numPhysFloatRegs;
 };
 
 #endif // __CPU_O3_CPU_HH__
