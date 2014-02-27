@@ -214,7 +214,7 @@ void DeadInstAnalyzer<Impl>::regStats()
 
 template<class Impl>
 void DeadInstAnalyzer<Impl>::checkForSilentStore (INS_STRUCT *node, DynInstPtr newInst) {
-
+ 
     DPRINTF (DeadInstAnalyzer, "Analyzing instruction [sn:%lld] for silent store\n", newInst->seqNum);
 
     // Prodromou: Get the information
