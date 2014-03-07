@@ -282,9 +282,14 @@ Packet::checkFunctional(Printable *obj, Addr addr, int size, uint8_t *data)
                     bytesValidEnd += overlap_size;
                 } else if ((c > 0 && b > 0)
                            || (a < 0 && d < 0)) {
-                    // region to be copied is discontiguous! Not supported.
-                    panic("BUG: Discontiguous bytes found"
-                          "for functional copying!");
+                    //Prodromou: The analyzer is not the only object that 
+		    //does functional reads. I'm not confident about this. 
+		    //The measurements might be off.
+		    cout<<"Warning: Discontiguous bytes found for functional copying!"<<endl;
+
+		    // region to be copied is discontiguous! Not supported.
+                    //panic("BUG: Discontiguous bytes found"
+                    //      "for functional copying!");
                 }
             }
             assert(bytesValidEnd <= getSize());

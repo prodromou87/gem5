@@ -98,12 +98,13 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
 // Prodromou: Checking happens here:
     if ((newInst->isLoad()) || (newInst->isStore())) {
 	analyzeDeadMemRef (node, newInst);
-        checkForSilentStore(node, newInst);
+        //checkForSilentStore(node, newInst);
     }
     else {
+
 	analyzeDeadRegOverwrite (node, newInst, numW, numR, WregNames, RregNames);
     }
-    
+  
     analyzeRegSameValueOverwrite (node, newInst, numW);
 //Prodromou: Checks completed
 
