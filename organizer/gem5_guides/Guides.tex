@@ -22,5 +22,27 @@ When talking about X86 FS simulation, the provided image (x86root) does not incl
 
 When you have a .rcS file ready, it needs to be added in gem5/configs/boot/ folder and specify the .rcS file when initiating the simulation with the -b option. For example, if you add Blackscholes.rcS script in the boot folder, the command for running it will be $$./build/X86/gem5.fast configs/example/fs.py\ -b\ Blackscholes$$ Note that .rcS extension is not included.
 
+\section{Checkpointing}
+
+When continuing from a checkpoint, the instruction sequence numbers restart from 1. Also, any statistics the simulator provides start from zero. Essentially, it assumes that we are interested only on the remaining of the executable.
+
+\subsection{Creating Checkpoints}
+Create checkpoint folder somewhere. To take the checkpoint, run $$build/ALPHA/gem5.debug configs/example/deadCode.py -c /home/prodromou/Desktop/a.out --take-checkpoint=K,L --max-checkpoints=N --checkpoint-dir=CHK\_PATH$$ where 
+
+\begin{itemize}
+\item K: The clock cycle for the checkpoint
+\item L: Take snapshots starting at K and every L cycles
+\item N: Take maximum of N checkpoints
+\item CHK\_PATH: ABSOLUTE path to the checkpoint directory (Where checkpoints will be stored)
+\end{itemize}
+
+\subsection{Resume from checkpoint}
+To resume from a checkpoint run $$ build/ALPHA/gem5.debug configs/example/deadCode.py -c /home/prodromou/Desktop/a.out --checkpoint-dir=CHK\_PATH -r CHK\_ID --restore-with-cpu detailed $$ where
+
+\begin{itemize}
+\item CHK\_PATH: The checkpoint directory specified when the checkpoint was captured
+\item CHK\_ID: The checkpoint number (Starts from 1). When the checkpoint folders are sorted lexically, \#1 corresponds to the first, \#2 to the secons etc.
+\item --restore-with-cpu detailed: Define the cpu-type that is needed to continue executing from the checkpoint. It is important to specify it, otherwise results might be wrong.
+\end{itemize}
 
 \end{document}

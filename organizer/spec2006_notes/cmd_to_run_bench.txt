@@ -1,0 +1,22 @@
+build/ALPHA/gem5.debug configs/example/se.py --cpu-type=detailed --caches -c /home/prodromou/Desktop/SPEC_2006/benchspec/CPU2006/400.perlbench/run/run_base_ref_alpha.0000/perlbench_base.alpha -o "-I/home/prodromou/Desktop/SPEC_2006/benchspec/CPU2006/400.perlbench/run/run_base_ref_alpha.0000/lib /home/prodromou/Desktop/SPEC_2006/benchspec/CPU2006/400.perlbench/run/run_base_ref_alpha.0000/checkspam.pl 2500 5 25 11 150 1 1 1 1"
+
+Note that you need the path to the "run" directory.
+To get the instructions for any benchmark go to the run directory of interest and run the specinvoke command that runspec runs, with an added -n at the end.
+
+Example:
+
+1) runspec shows: /home/prodromou/Desktop/SPEC_2006/bin/specinvoke -d /home/prodromou/Desktop/SPEC_2006/benchspec/CPU2006/400.perlbench/run/run_base_ref_amd64-m64-gcc43-nn.0005 -e speccmds.err -o speccmds.stdout -f speccmds.cmd -C
+
+2)Switch to the run directory and execute the same instruction, with a -n at the end (two -n if you want the cd instructions as well)
+
+3) The output shows the instructions:
+# Starting run for copy #0
+../run_base_ref_alpha.0000/perlbench_base.alpha -I./lib checkspam.pl 2500 5 25 11 150 1 1 1 1 > checkspam.2500.5.25.11.150.1.1.1.1.out 2>> checkspam.2500.5.25.11.150.1.1.1.1.err
+# Starting run for copy #0
+../run_base_ref_alpha.0000/perlbench_base.alpha -I./lib diffmail.pl 4 800 10 17 19 300 > diffmail.4.800.10.17.19.300.out 2>> diffmail.4.800.10.17.19.300.err
+# Starting run for copy #0
+../run_base_ref_alpha.0000/perlbench_base.alpha -I./lib splitmail.pl 1600 12 26 16 4500 > splitmail.1600.12.26.16.4500.out 2>> splitmail.1600.12.26.16.4500.err
+
+(also the instructions for the "ref" size test can be found at:
+http://boegel.kejo.be/ELIS/spec_cpu2006/spec_cpu2006_command_lines.html
+
