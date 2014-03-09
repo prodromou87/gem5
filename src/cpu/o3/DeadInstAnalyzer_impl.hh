@@ -29,6 +29,7 @@ DeadInstAnalyzer<Impl>::DeadInstAnalyzer() {
     // Register this object's statistics
     regStats();
 
+/*
     deadInstructionsList = new long long int [SIZE];
     
     ifstream input;
@@ -40,6 +41,7 @@ DeadInstAnalyzer<Impl>::DeadInstAnalyzer() {
 
     for (int i=0; i<SIZE; i++) 
 	DPRINTF(DeadInstAnalyzer,"LIST: %lli\n", deadInstructionsList[i]);
+*/
 
     nextDeadIns = 0;
 }
@@ -238,8 +240,8 @@ void DeadInstAnalyzer<Impl>::checkForSilentStore (INS_STRUCT *node, DynInstPtr n
 
     // Mask the memory result and get all necessary info
 	uint64_t mask = pow(2,size*4)-1; // *4 to convert size in bits (YES it's not 8 it's 4)
-	uint64_t mem_data = data_pkt->get<uint64_t>();
-	uint64_t useful_data = mem_data & mask;
+	uint64_t *mem_data = data_pkt->getPtr<uint64_t>();
+	uint64_t useful_data = *(mem_data) & mask;
 	uint64_t reg_data = -1234;
 	int reg_id = (int)(newInst->srcRegIdx(0));
 
