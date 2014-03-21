@@ -9,15 +9,16 @@
 using namespace std;
 
 template<class Impl>
-DeadInstAnalyzer<Impl>::DeadInstAnalyzer() {
+DeadInstAnalyzer<Impl>::DeadInstAnalyzer(O3CPU *cpu_ptr, UINT64 InstWindow)
+    : cpu (cpu_ptr),
+      STREAM_WINDOW (InstWindow) 
+{
 
     //Initialize Variables
     globalInsCount = 0;
     deadInsCounter=0;
     deadStreamCounter = 0;
     totalInsCounter = 0;
-
-    STREAM_WINDOW = 100000;
 
     totalInstructions = 0;
     deadInstructions = 0;
@@ -28,6 +29,8 @@ DeadInstAnalyzer<Impl>::DeadInstAnalyzer() {
     
     // Register this object's statistics
     regStats();
+
+    DPRINTF (DeadInstAnalyzer, "Constructor: Created window of size %lld\n", STREAM_WINDOW);
 
 /*
     deadInstructionsList = new long long int [SIZE];

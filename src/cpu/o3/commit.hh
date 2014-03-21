@@ -539,7 +539,7 @@ class DefaultCommit
     Stats::Vector commitEligible;
 
     //Prodromou: Declaring the Deadness Analyzer object
-    DeadInstAnalyzer deadInstAnalyzer;
+    DeadInstAnalyzer *deadInstAnalyzer;
     //Prodromou: End of code section
 };
 

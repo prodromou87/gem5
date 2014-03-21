@@ -118,8 +118,7 @@ DefaultCommit<Impl>::DefaultCommit(O3CPU *_cpu, DerivO3CPUParams *params)
     //Assign commit policy
     if (policy == "aggressive"){
         commitPolicy = Aggressive;
-
-        DPRINTF(Commit,"Commit Policy set to Aggressive.\n");
+	DPRINTF(Commit,"Commit Policy set to Aggressive.\n");
     } else if (policy == "roundrobin"){
         commitPolicy = RoundRobin;
 
@@ -153,7 +152,7 @@ DefaultCommit<Impl>::DefaultCommit(O3CPU *_cpu, DerivO3CPUParams *params)
     interrupt = NoFault;
 
     //Prodromou: Send the cpu pointer to the deadInstAnalyzer
-    deadInstAnalyzer.setCpu(_cpu);
+    deadInstAnalyzer = new DeadInstAnalyzer (_cpu, params->InstWindow);
 
 }
 
@@ -1030,12 +1029,12 @@ DefaultCommit<Impl>::commitInsts()
 		    ); //If true, future commitHead call will return true
 
 	    if (futureCommitSuccess) {
-		nextDead = deadInstAnalyzer.nextDead();
+		nextDead = deadInstAnalyzer->nextDead();
 		if (head_inst->seqNum == nextDead) {
 		    DPRINTF(Prodromou,"Declaring Instruction dead [sn: %lli]\n",head_inst->seqNum);
 		    head_inst->isInstDead = true;
 		    //Prodromou: Let the analyzer know to progress its State Machine
-		    deadInstAnalyzer.deadInstMet();
+		    deadInstAnalyzer->deadInstMet();
 		}
 	    }
 
@@ -1050,7 +1049,7 @@ DefaultCommit<Impl>::commitInsts()
 		//Prodromou: Instructions that reach the commit stage
 		//Prodromou: change the processor's state and disappear
 
-		deadInstAnalyzer.analyze(head_inst);
+		deadInstAnalyzer->analyze(head_inst);
 
 		//Prodromou: For code understanding
 		string instInfo = "";

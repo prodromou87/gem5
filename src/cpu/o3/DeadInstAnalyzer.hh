@@ -84,9 +84,7 @@ class DeadInstAnalyzer {
 	long long int *deadInstructionsList;	
 
     public:
-	DeadInstAnalyzer();
-
-	void setCpu (O3CPU *cpu_ptr) { cpu = cpu_ptr; }
+	DeadInstAnalyzer(O3CPU *cpu_ptr, UINT64 InstWindow);
 
 	//The connecting function between the Analyzer and the 
 	//commit stage. Commited instructions are sent to this 

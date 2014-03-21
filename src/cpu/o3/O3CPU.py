@@ -131,6 +131,10 @@ class DerivO3CPU(BaseCPU):
     needsTSO = Param.Bool(buildEnv['TARGET_ISA'] == 'x86',
                           "Enable TSO Memory model")
 
+    #Prodromou: Setting the size of the instruction Window (DIA)
+    InstWindow = Param.UInt64(200000, "Size of the Instruction Window (DIA)");
+    #Prodromou
+
     def addCheckerCpu(self):
         if buildEnv['TARGET_ISA'] in ['arm']:
             from ArmTLB import ArmTLB
