@@ -178,6 +178,12 @@ bool DeadInstAnalyzer<Impl>::checkDeadness (INS_STRUCT *instruction) {
 	declareDead(instruction);
         return true;
     }
+    /*
+    NOTE: if instruction's read count is not 0 but it's overwritten, 
+    is there a chance that the overwrite was silent (Could this 
+    happen when this is a recursive call -- backlog?) If it's possible, 
+    we are missing some opportunity here
+    */
     return false;
 }
 
@@ -191,6 +197,10 @@ void DeadInstAnalyzer<Impl>::declareDead (INS_STRUCT *instruction) {
     ++deadInstructions;
 
     long long int currentHead = (*(instructions.begin()))->ID;
+
+    //IMPORTANT: Before starting reducing the instruction counts I should update all the WAW list overwrite counts. Otherwise it might lead to errors. (Instruction thinks it's dead, but the instruction that overwritten it is dead already). 
+    // FIXED: There is no need to do this IF THERE IS ONLY ONE output register. Otherwise I need to take care of it. REASON: The instruction that triggered backlog is dead, thus overwritten. Consequently all WAW instructions are still overwritten.
+
     //DECREASE THE COUNTER IN ALL RAWs
     for (typename deque<INS_STRUCT*>::iterator it=(instruction->RAW).begin(); it != (instruction->RAW).end(); ++it) {
         if ((*it)->ID < currentHead) continue;
