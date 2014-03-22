@@ -164,7 +164,9 @@ if options.smt and options.num_cpus > 1:
     fatal("You cannot use SMT with multiple CPUs!")
 
 np = options.num_cpus
-system = System(cpu = [CPUClass(cpu_id=i) for i in xrange(np)],
+
+#PRODROMOU: Set the instruction window
+system = System(cpu = [CPUClass(cpu_id=i, InstWindow=options.inst_window) for i in xrange(np)],
                 mem_mode = test_mem_mode,
                 mem_ranges = [AddrRange(options.mem_size)],
                 cache_line_size = options.cacheline_size)
