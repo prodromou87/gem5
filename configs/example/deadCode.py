@@ -166,7 +166,7 @@ if options.smt and options.num_cpus > 1:
 np = options.num_cpus
 
 #PRODROMOU: Set the instruction window
-system = System(cpu = [CPUClass(cpu_id=i, InstWindow=options.inst_window) for i in xrange(np)],
+system = System(cpu = [CPUClass(cpu_id=i, InstWindow=options.dia_inst_window, OpType=options.dia_operation_type) for i in xrange(np)],
                 mem_mode = test_mem_mode,
                 mem_ranges = [AddrRange(options.mem_size)],
                 cache_line_size = options.cacheline_size)

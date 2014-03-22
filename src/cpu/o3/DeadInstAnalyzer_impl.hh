@@ -2,6 +2,7 @@
 #include "debug/DeadInstAnalyzer.hh"
 #include "debug/Prodromou.hh"
 #include "arch/utility.hh"
+#include "params/DerivO3CPU.hh"
 #include <fstream>
 
 #define SIZE 33
@@ -9,9 +10,10 @@
 using namespace std;
 
 template<class Impl>
-DeadInstAnalyzer<Impl>::DeadInstAnalyzer(O3CPU *cpu_ptr, UINT64 InstWindow)
+DeadInstAnalyzer<Impl>::DeadInstAnalyzer(O3CPU *cpu_ptr, DerivO3CPUParams *params)
     : cpu (cpu_ptr),
-      STREAM_WINDOW (InstWindow) 
+      STREAM_WINDOW (params->InstWindow), 
+      op_type (params->OpType)
 {
 
     //Initialize Variables
@@ -30,7 +32,7 @@ DeadInstAnalyzer<Impl>::DeadInstAnalyzer(O3CPU *cpu_ptr, UINT64 InstWindow)
     // Register this object's statistics
     regStats();
 
-    DPRINTF (DeadInstAnalyzer, "Constructor: Created window of size %lld\n", STREAM_WINDOW);
+    DPRINTF (DeadInstAnalyzer, "Constructor: Created window of size %lld. Operation Type: %d\n", STREAM_WINDOW, op_type);
 
 /*
     deadInstructionsList = new long long int [SIZE];
@@ -101,16 +103,34 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
 
 
 // Prodromou: Checking happens here:
+
+/*
+    NOTE: op_type defines the checks
+	op_type = 1 => Only OverReg check
+	op_type = 2 => + SilentRegs check
+	op_type = 3 => + OverMem check
+	op_type = 4 => + SilentStores check (all checkers active)
+*/
+
+    //Check for overwrites
     if ((newInst->isLoad()) || (newInst->isStore())) {
+	//OverMem check
 	analyzeDeadMemRef (node, newInst);
+    }
+    else {
+	//OverReg chec
+	analyzeDeadRegOverwrite (node,newInst,numW,numR,WregNames,RregNames);
+    }
+
+    //Check for silence
+    if (newInst->isStore()) {
+	//SilentStore check
         checkForSilentStore(node, newInst);
     }
     else {
-
-	analyzeDeadRegOverwrite (node, newInst, numW, numR, WregNames, RregNames);
+	//SilentReg check
+	analyzeRegSameValueOverwrite (node, newInst, numW);
     }
-  
-    analyzeRegSameValueOverwrite (node, newInst, numW);
 //Prodromou: Checks completed
 
 
@@ -220,6 +240,11 @@ void DeadInstAnalyzer<Impl>::regStats()
 
 template<class Impl>
 void DeadInstAnalyzer<Impl>::checkForSilentStore (INS_STRUCT *node, DynInstPtr newInst) {
+
+     //check operation type and return if checker is not activated
+    if (op_type < 4) {
+        return;
+    }
  
     DPRINTF (DeadInstAnalyzer, "Analyzing instruction [sn:%lld] for silent store\n", newInst->seqNum);
 
@@ -299,6 +324,12 @@ void DeadInstAnalyzer<Impl>::printNodeInfo (INS_STRUCT *node,
 
 template<class Impl>
 void DeadInstAnalyzer<Impl>::analyzeDeadMemRef (INS_STRUCT *node, DynInstPtr newInst) {
+
+     //check operation type and return if checker is not activated
+    if (op_type < 3) {
+        return;
+    }
+
     // Reading Memory References => Load Instructions
     // Handling memory address as a register.
     if (newInst->isLoad()) {
@@ -335,6 +366,12 @@ void DeadInstAnalyzer<Impl>::analyzeDeadRegOverwrite (INS_STRUCT *node,
 						      int numW, int numR,
 						      int *WregNames,
 						      int *RregNames) {
+
+    //check operation type and return if checker is not activated
+    if (op_type < 1) {
+	return; 
+    }
+
     for (int i=0; i<numR; i++) {
 	int regName = RregNames[i];
 
@@ -363,6 +400,11 @@ void DeadInstAnalyzer<Impl>::analyzeDeadRegOverwrite (INS_STRUCT *node,
 
 template<class Impl>
 void DeadInstAnalyzer<Impl>::analyzeRegSameValueOverwrite (INS_STRUCT *node, DynInstPtr newInst, int numW){
+
+     //check operation type and return if checker is not activated
+    if (op_type < 2) {
+        return;
+    }
 
     int reg_id = (int)(newInst->destRegIdx(0));
     uint64_t res=-1234;

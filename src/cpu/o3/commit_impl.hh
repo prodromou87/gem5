@@ -152,7 +152,7 @@ DefaultCommit<Impl>::DefaultCommit(O3CPU *_cpu, DerivO3CPUParams *params)
     interrupt = NoFault;
 
     //Prodromou: Send the cpu pointer to the deadInstAnalyzer
-    deadInstAnalyzer = new DeadInstAnalyzer (_cpu, params->InstWindow);
+    deadInstAnalyzer = new DeadInstAnalyzer (_cpu, params);
 
 }
 

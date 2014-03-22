@@ -12,6 +12,8 @@
 #include "arch/utility.hh"
 using namespace std;
 
+struct DerivO3CPUParams;
+
 template<class Impl>
 class DeadInstAnalyzer {
     private:
@@ -62,6 +64,7 @@ class DeadInstAnalyzer {
 	void checkForSilentStore (INS_STRUCT *node, DynInstPtr newInst);
 
 	UINT64 STREAM_WINDOW;
+	int op_type;
 
 	//Functions needed to create new entries in 
 	//the list of simulation statistics
@@ -84,7 +87,7 @@ class DeadInstAnalyzer {
 	long long int *deadInstructionsList;	
 
     public:
-	DeadInstAnalyzer(O3CPU *cpu_ptr, UINT64 InstWindow);
+	DeadInstAnalyzer(O3CPU *cpu_ptr, DerivO3CPUParams *params);
 
 	//The connecting function between the Analyzer and the 
 	//commit stage. Commited instructions are sent to this 

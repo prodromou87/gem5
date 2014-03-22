@@ -133,6 +133,7 @@ class DerivO3CPU(BaseCPU):
 
     #Prodromou: Setting the size of the instruction Window (DIA)
     InstWindow = Param.UInt64(200000, "Size of the Instruction Window (DIA)");
+    OpType = Param.Int(4, "The operation type for the DIA")
     #Prodromou
 
     def addCheckerCpu(self):

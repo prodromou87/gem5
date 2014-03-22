@@ -101,9 +101,12 @@ def addCommonOptions(parser):
     parser.add_option("--l3cache", 
 		      action = "store_true", 
 		      help = "Enable L3 cache (Implies L2)")
-    parser.add_option("-w", "--inst-window", 
+    parser.add_option("-w", "--dia-inst-window", 
 		      type="int", default=100000,
 		      help="The size of the Instruction Window (DIA)")
+    parser.add_option("-d", "--dia-operation-type", type="int", default=4,
+		      help="The operation type for the DIA (Default is 4): [1] -> OverRegs only, [2] -> + SilentRegs, [3] -> + OverMem, [4] -> + SilentStores")
+			    
     #PRODROMOU
     parser.add_option("--fastmem", action="store_true")
     parser.add_option("--num-dirs", type="int", default=1)
