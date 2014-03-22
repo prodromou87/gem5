@@ -98,7 +98,12 @@ def addCommonOptions(parser):
     parser.add_option("--caches", action="store_true")
     parser.add_option("--l2cache", action="store_true")
     #PRODROMOU
-    parser.add_option("--l3cache", action="store_true")
+    parser.add_option("--l3cache", 
+		      action = "store_true", 
+		      help = "Enable L3 cache (Implies L2)")
+    parser.add_option("-w", "--inst-window", 
+		      type="int", default=100000,
+		      help="The size of the Instruction Window (DIA)")
     #PRODROMOU
     parser.add_option("--fastmem", action="store_true")
     parser.add_option("--num-dirs", type="int", default=1)
