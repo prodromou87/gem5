@@ -34,7 +34,7 @@ DeadInstAnalyzer<Impl>::DeadInstAnalyzer(O3CPU *cpu_ptr, DerivO3CPUParams *param
     fromOverStore = 0;
     fromSilentReg = 0;
     fromSilentStore = 0;
-    
+
     // Register this object's statistics
     regStats();
 
@@ -114,8 +114,8 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
     NOTE: op_type defines the checks
 	op_type = 1 => Only OverReg check
 	op_type = 2 => + SilentRegs check
-	op_type = 3 => + OverMem check
-	op_type = 4 => + SilentStores check (all checkers active)
+	op_type = 3 => + SilentStores check
+	op_type = 4 => + OverMem check (all checkers active)
 */
 
     //Check for overwrites
@@ -126,6 +126,7 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
 	fromOverStore += (deadInstructions.value() - t);
     }
     else {
+
 	//OverReg chec
 	UINT64 t = deadInstructions.value();
 	analyzeDeadRegOverwrite (node,newInst,numW,numR,WregNames,RregNames);
@@ -145,6 +146,7 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
 	analyzeRegSameValueOverwrite (node, newInst, numW);
 	fromSilentReg += (deadInstructions.value() - t);
     }
+
 //Prodromou: Checks completed
 
 
@@ -280,7 +282,7 @@ template<class Impl>
 void DeadInstAnalyzer<Impl>::checkForSilentStore (INS_STRUCT *node, DynInstPtr newInst) {
 
      //check operation type and return if checker is not activated
-    if (op_type < 4) {
+    if (op_type < 3) {
         return;
     }
  
@@ -363,15 +365,15 @@ void DeadInstAnalyzer<Impl>::printNodeInfo (INS_STRUCT *node,
 template<class Impl>
 void DeadInstAnalyzer<Impl>::analyzeDeadMemRef (INS_STRUCT *node, DynInstPtr newInst) {
 
-     //check operation type and return if checker is not activated
-    if (op_type < 3) {
+    //check operation type and return if checker is not activated
+    if (op_type < 4) {
         return;
     }
 
     // Reading Memory References => Load Instructions
     // Handling memory address as a register.
     if (newInst->isLoad()) {
-        long regName = newInst->effAddr;
+        long regName = newInst->effAddr; //Adds a TON of overhead. I don't know why
         DPRINTF(Prodromou, "Load Instruction. Reading From: %#08d\n", regName);
         INS_STRUCT *conflictingIns = regFile[regName];
         if (conflictingIns != NULL) {
@@ -382,7 +384,7 @@ void DeadInstAnalyzer<Impl>::analyzeDeadMemRef (INS_STRUCT *node, DynInstPtr new
     // Writing Memory References => Store Instructions
     else if (newInst->isStore()) {
         // Use the address of the store/load and use that as a register's name
-        long regName = newInst->effAddr;
+        long regName = newInst->effAddr; //Adds a TON of overhead. I don't know why
         INS_STRUCT *conflictingIns = regFile[regName];
         if (conflictingIns != NULL) {
             node->WAW.push_back(conflictingIns);
@@ -396,6 +398,7 @@ void DeadInstAnalyzer<Impl>::analyzeDeadMemRef (INS_STRUCT *node, DynInstPtr new
         regFile[regName] = node;
 
     }
+
 }
 
 template<class Impl>

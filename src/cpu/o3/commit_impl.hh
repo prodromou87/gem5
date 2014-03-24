@@ -1051,11 +1051,6 @@ DefaultCommit<Impl>::commitInsts()
 
 		deadInstAnalyzer->analyze(head_inst);
 
-		//Prodromou: For code understanding
-		string instInfo = "";
-		head_inst->dump(instInfo);
-		//Prodromou: End of code section
-
                 ++num_committed;
 
                 changedROBNumEntries[tid] = true;

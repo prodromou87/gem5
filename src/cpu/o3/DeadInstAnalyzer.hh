@@ -98,7 +98,7 @@ class DeadInstAnalyzer {
 	//commit stage. Commited instructions are sent to this 
 	//function for deadness analyzis
 	void analyze(DynInstPtr newInst);
-
+	
 	long long int nextDead();
 	void deadInstMet();
 
