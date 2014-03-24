@@ -81,6 +81,11 @@ class DeadInstAnalyzer {
 	Stats::Scalar overStores;
 	Stats::Scalar overRegs;
 
+	Stats::Scalar fromOverReg;
+	Stats::Scalar fromOverStore;
+	Stats::Scalar fromSilentReg;
+	Stats::Scalar fromSilentStore;
+
 	int nextDeadIns;
 	
 	//Prodromou: List to hold all dead Instructions

@@ -4,6 +4,7 @@
 #include "arch/utility.hh"
 #include "params/DerivO3CPU.hh"
 #include <fstream>
+#include "base/statistics.hh"
 
 #define SIZE 33
 
@@ -28,6 +29,11 @@ DeadInstAnalyzer<Impl>::DeadInstAnalyzer(O3CPU *cpu_ptr, DerivO3CPUParams *param
     silentRegs = 0;
     overStores = 0;
     overRegs = 0;
+
+    fromOverReg = 0;
+    fromOverStore = 0;
+    fromSilentReg = 0;
+    fromSilentStore = 0;
     
     // Register this object's statistics
     regStats();
@@ -115,21 +121,29 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
     //Check for overwrites
     if ((newInst->isLoad()) || (newInst->isStore())) {
 	//OverMem check
+	UINT64 t = deadInstructions.value();
 	analyzeDeadMemRef (node, newInst);
+	fromOverStore += (deadInstructions.value() - t);
     }
     else {
 	//OverReg chec
+	UINT64 t = deadInstructions.value();
 	analyzeDeadRegOverwrite (node,newInst,numW,numR,WregNames,RregNames);
+	fromOverReg += (deadInstructions.value() - t);
     }
 
     //Check for silence
     if (newInst->isStore()) {
 	//SilentStore check
+	UINT64 t = deadInstructions.value();
         checkForSilentStore(node, newInst);
+	fromSilentStore += (deadInstructions.value() - t);
     }
     else {
 	//SilentReg check
+	UINT64 t = deadInstructions.value();
 	analyzeRegSameValueOverwrite (node, newInst, numW);
+	fromSilentReg += (deadInstructions.value() - t);
     }
 //Prodromou: Checks completed
 
@@ -244,7 +258,21 @@ void DeadInstAnalyzer<Impl>::regStats()
 	.name(name()+".silentRegs")
 	.desc("Number of register writes with the same value as the previous write");
 
-    
+    fromOverReg
+        .name(name()+".fromOverReg")
+        .desc("Number of dead instructions where backlog was triggered by OverReg");
+
+    fromOverStore
+        .name(name()+".fromOverStore")
+        .desc("Number of dead instructions where backlog was triggered by OverStore");
+
+    fromSilentReg
+        .name(name()+".fromSilentReg")
+        .desc("Number of dead instructions where backlog was triggered by SilentReg");
+
+    fromSilentStore
+        .name(name()+".fromSilentStore")
+        .desc("Number of dead instructions where backlog was triggered by SilentStore");
 }
 
 
@@ -398,11 +426,12 @@ void DeadInstAnalyzer<Impl>::analyzeDeadRegOverwrite (INS_STRUCT *node,
 	if (conflictingIns != NULL) {
 	    node->WAW.push_back(conflictingIns);
 	    conflictingIns->OWCount ++;
-
+ 
 	    //Marks the end of a dead code stream
 	    if (checkDeadness(conflictingIns)) {
 		deadStreamCounter ++;
 	    }
+	    
 	}
 	regFile[regName] = node;
     }
