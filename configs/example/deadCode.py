@@ -62,6 +62,9 @@ import MemConfig
 from Caches import *
 from cpu2000 import *
 
+#Prodromou: Include MyBench.pl file
+import MyBench
+
 def get_processes(options):
     """Interprets provided options and returns a list of processes"""
 
@@ -86,7 +89,13 @@ def get_processes(options):
     options.cpu_type = "detailed"
     options.caches = True
 
-
+    #Prodromou: Invoke the benchmarks
+    if options.benchmark:
+	if options.benchmark == 'perlbench':
+	    process = MyBench.perlbench
+	
+	multiprocesses.append(process)
+	return multiprocesses, 1
 
     idx = 0
     for wrkld in workloads:
@@ -147,6 +156,9 @@ if options.bench:
         except:
             print >>sys.stderr, "Unable to find workload for %s: %s" % (buildEnv['TARGET_ISA'], app)
             sys.exit(1)
+#Prodromou: Need to add this
+elif options.benchmark:
+    multiprocesses, numThreads = get_processes(options)
 elif options.cmd:
     multiprocesses, numThreads = get_processes(options)
 else:
