@@ -5,6 +5,8 @@
 #include "params/DerivO3CPU.hh"
 #include <fstream>
 #include "base/statistics.hh"
+#include <cstdio>
+#include <cstdlib>
 
 #define SIZE 33
 
@@ -119,18 +121,16 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
 */
 
     //Check for overwrites
+    //OverReg chec -- ALL INSTRUCTIONS MUST DO THIS
+    UINT64 t = deadInstructions.value();
+    analyzeDeadRegOverwrite (node,newInst,numW,numR,WregNames,RregNames);
+    fromOverReg += (deadInstructions.value() - t);
+    
     if ((newInst->isLoad()) || (newInst->isStore())) {
 	//OverMem check
 	UINT64 t = deadInstructions.value();
 	analyzeDeadMemRef (node, newInst);
 	fromOverStore += (deadInstructions.value() - t);
-    }
-    else {
-
-	//OverReg chec
-	UINT64 t = deadInstructions.value();
-	analyzeDeadRegOverwrite (node,newInst,numW,numR,WregNames,RregNames);
-	fromOverReg += (deadInstructions.value() - t);
     }
 
     //Check for silence
@@ -168,12 +168,12 @@ template<class Impl>
 void DeadInstAnalyzer<Impl>::clearRegFile(INS_STRUCT *instruction) {
     long long int id = instruction->ID;
 
-    for (typename map<long,INS_STRUCT*>::iterator it=regFile.begin(); it!=regFile.end(); ++it) {
+    for (typename map<string,INS_STRUCT*>::iterator it=regFile.begin(); it!=regFile.end(); ++it) {
         if (it->second == NULL) continue;
         if (it->second->ID == id) {
             if (!(it->second->isMemRef)) it->second = NULL;
 	    else {
-		regFile.erase(it);
+		regFile.erase(it); //NOTE: VERIFY CORRECTNESS
 	    }
         }
     }
@@ -370,11 +370,17 @@ void DeadInstAnalyzer<Impl>::analyzeDeadMemRef (INS_STRUCT *node, DynInstPtr new
         return;
     }
 
+    string regName = "";
     // Reading Memory References => Load Instructions
     // Handling memory address as a register.
     if (newInst->isLoad()) {
-        long regName = newInst->effAddr; //Adds a TON of overhead. I don't know why
-        DPRINTF(Prodromou, "Load Instruction. Reading From: %#08d\n", regName);
+        
+	//Option 0
+	//long regName = newInst->effAddr; //Adds a TON of overhead. I don't know why
+	//Option 2
+	regName = static_cast<ostringstream*>( &(ostringstream() << newInst->effAddr) )->str();
+
+        DPRINTF(Prodromou, "Load Instruction. Reading From: %#08s\n", regName);
         INS_STRUCT *conflictingIns = regFile[regName];
         if (conflictingIns != NULL) {
             node->RAW.push_back(conflictingIns);
@@ -384,7 +390,11 @@ void DeadInstAnalyzer<Impl>::analyzeDeadMemRef (INS_STRUCT *node, DynInstPtr new
     // Writing Memory References => Store Instructions
     else if (newInst->isStore()) {
         // Use the address of the store/load and use that as a register's name
-        long regName = newInst->effAddr; //Adds a TON of overhead. I don't know why
+	//Option 0
+       //long regName = newInst->effAddr; //Adds a TON of overhead. I don't know why
+        //Option 2
+        regName = static_cast<ostringstream*>( &(ostringstream() << newInst->effAddr) )->str();
+
         INS_STRUCT *conflictingIns = regFile[regName];
         if (conflictingIns != NULL) {
             node->WAW.push_back(conflictingIns);
@@ -413,8 +423,12 @@ void DeadInstAnalyzer<Impl>::analyzeDeadRegOverwrite (INS_STRUCT *node,
 	return; 
     }
 
+    string regName = "";
     for (int i=0; i<numR; i++) {
-	int regName = RregNames[i];
+	//Option 0
+	//int regName = RregNames[i];
+        //Option 2
+        regName = static_cast<ostringstream*>( &(ostringstream() << RregNames[i]) )->str();
 
 	INS_STRUCT *conflictingIns = regFile[regName];
 	if (conflictingIns != NULL) {
@@ -423,7 +437,10 @@ void DeadInstAnalyzer<Impl>::analyzeDeadRegOverwrite (INS_STRUCT *node,
 	}
     }
     for (int i=0; i<numW; i++) {
-	int regName = WregNames[i];
+	//Option 0
+        //int regName = WregNames[i];
+        //Option 2
+        regName = static_cast<ostringstream*>( &(ostringstream() << WregNames[i]) )->str();
 
 	INS_STRUCT *conflictingIns = regFile[regName];
 	if (conflictingIns != NULL) {

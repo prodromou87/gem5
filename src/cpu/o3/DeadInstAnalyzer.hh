@@ -38,7 +38,7 @@ class DeadInstAnalyzer {
 	    bool isMemRef; //Set to true if the instruction is Memory Reference (Load/Store)
 	};
 
-	map <long, INS_STRUCT*> regFile; // Holds the last writer instruction for each reg
+	map <string, INS_STRUCT*> regFile; // Holds the last writer instruction for each reg
 	deque <INS_STRUCT*> instructions; // The instruction window
 
 	UINT64 globalInsCount;
