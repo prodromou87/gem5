@@ -1,16 +1,100 @@
 #include "cpu/o3/DeadInstAnalyzer.hh"
 #include "debug/DeadInstAnalyzer.hh"
 #include "debug/Prodromou.hh"
+#include "debug/Threads.hh"
 #include "arch/utility.hh"
 #include "params/DerivO3CPU.hh"
 #include <fstream>
 #include "base/statistics.hh"
 #include <cstdio>
 #include <cstdlib>
+using namespace std;
 
 #define SIZE 33
 
-using namespace std;
+//Prodromou: functions for thread workers
+#include <thread>
+#include <mutex>
+#define THREADED 0 // True
+
+
+template<class Impl>
+void DeadInstAnalyzer<Impl>::overReg(thread_struct *my_data) {
+
+    //This function operates on all instructions
+
+    dead_ctr_lock.lock();
+	UINT64 t = deadInstructions.value();
+    dead_ctr_lock.unlock();
+    
+    analyzeDeadRegOverwrite (my_data->node,
+			     my_data->newInst,
+			     my_data->numW,
+			     my_data->numR,
+			     my_data->WregNames,
+			     my_data->RregNames);
+    
+    dead_ctr_lock.lock();
+	fromOverReg += (deadInstructions.value() - t);
+    dead_ctr_lock.unlock();
+
+}
+
+template<class Impl>
+void DeadInstAnalyzer<Impl>::overMem(thread_struct *my_data)
+{
+    if (((my_data->newInst)->isLoad()) || ((my_data->newInst)->isStore())) {
+        //OverMem check
+	dead_ctr_lock.lock();
+	    UINT64 t = deadInstructions.value();
+	dead_ctr_lock.unlock();
+        
+	analyzeDeadMemRef (my_data->node, my_data->newInst);
+        
+	dead_ctr_lock.lock();
+	    fromOverStore += (deadInstructions.value() - t);
+	dead_ctr_lock.unlock();
+    }
+
+}
+
+template<class Impl>
+void DeadInstAnalyzer<Impl>::silentReg(thread_struct *my_data)
+{
+    if (!((my_data->newInst)->isStore())) {
+        //SilentReg check
+	dead_ctr_lock.lock();
+	    UINT64 t = deadInstructions.value();
+	dead_ctr_lock.unlock();
+
+        analyzeRegSameValueOverwrite (my_data->node, 
+				      my_data->newInst, 
+				      my_data->numW);
+
+	dead_ctr_lock.lock();
+	    fromSilentReg += (deadInstructions.value() - t);
+	dead_ctr_lock.unlock();
+    }
+
+}
+
+template<class Impl>
+void DeadInstAnalyzer<Impl>::silentStore(thread_struct *my_data)
+{
+    if ((my_data->newInst)->isStore()) {
+        //SilentStore check
+	dead_ctr_lock.lock();
+	    UINT64 t = deadInstructions.value();
+	dead_ctr_lock.unlock();
+
+        checkForSilentStore(my_data->node, my_data->newInst);
+
+	dead_ctr_lock.lock();
+	    fromSilentStore += (deadInstructions.value() - t);
+	dead_ctr_lock.unlock();
+    }
+
+}
 
 template<class Impl>
 DeadInstAnalyzer<Impl>::DeadInstAnalyzer(O3CPU *cpu_ptr, DerivO3CPUParams *params)
@@ -119,7 +203,7 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
 	op_type = 3 => + SilentStores check
 	op_type = 4 => + OverMem check (all checkers active)
 */
-
+if (! THREADED) {
     //Check for overwrites
     //OverReg chec -- ALL INSTRUCTIONS MUST DO THIS
     UINT64 t = deadInstructions.value();
@@ -146,7 +230,32 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
 	analyzeRegSameValueOverwrite (node, newInst, numW);
 	fromSilentReg += (deadInstructions.value() - t);
     }
+}
+else {
+    //Prodromou: Create one worker thread for each check
+    //Initialize the structure to pass to the workers
+    thread_struct t = {
+        node,
+        newInst,
+        numW,
+        numR,
+        WregNames,
+        RregNames,
+    };
 
+    DPRINTF (Threads, "Spawning Threads\n");    
+    thread t1(&DeadInstAnalyzer<Impl>::overReg, this, &t);
+    thread t2(&DeadInstAnalyzer<Impl>::overMem, this, &t);
+    thread t3(&DeadInstAnalyzer<Impl>::silentReg, this, &t);
+    thread t4(&DeadInstAnalyzer<Impl>::silentStore, this, &t);
+
+    t1.join();
+    t2.join();
+    t3.join();
+    t4.join();
+    DPRINTF (Threads, "Threads Joined\n");    
+    
+}
 //Prodromou: Checks completed
 
 
@@ -221,8 +330,13 @@ void DeadInstAnalyzer<Impl>::declareDead (INS_STRUCT *instruction) {
     for (typename deque<INS_STRUCT*>::iterator it=(instruction->RAW).begin(); it != (instruction->RAW).end(); ++it) {
         if ((*it)->ID < currentHead) continue;
         else {
-            (*it)->readCounter --;
-            checkDeadness (*it);
+
+	    //Prodromou: RAW modification
+	    raw_lock.lock();
+		(*it)->readCounter --;
+	    raw_lock.unlock();
+            
+	    checkDeadness (*it);
         }
     }
 }
@@ -333,7 +447,9 @@ void DeadInstAnalyzer<Impl>::checkForSilentStore (INS_STRUCT *node, DynInstPtr n
     if (useful_data == reg_useful_data) {
 	DPRINTF (DeadInstAnalyzer, "[sn:%lli] Silent store. Instruction Dead\n", newInst->seqNum);
 	silentStores++;
-	declareDead(node);
+	dead_ctr_lock.lock();
+	    declareDead(node);
+	dead_ctr_lock.unlock();
     }
     
     delete[] temp;
@@ -383,8 +499,10 @@ void DeadInstAnalyzer<Impl>::analyzeDeadMemRef (INS_STRUCT *node, DynInstPtr new
         DPRINTF(Prodromou, "Load Instruction. Reading From: %#08s\n", regName);
         INS_STRUCT *conflictingIns = regFile[regName];
         if (conflictingIns != NULL) {
-            node->RAW.push_back(conflictingIns);
-            conflictingIns->readCounter++;
+	    raw_lock.lock();
+		node->RAW.push_back(conflictingIns);
+		conflictingIns->readCounter++;
+	    raw_lock.unlock();
         }
     }
     // Writing Memory References => Store Instructions
@@ -397,15 +515,21 @@ void DeadInstAnalyzer<Impl>::analyzeDeadMemRef (INS_STRUCT *node, DynInstPtr new
 
         INS_STRUCT *conflictingIns = regFile[regName];
         if (conflictingIns != NULL) {
-            node->WAW.push_back(conflictingIns);
-            conflictingIns->OWCount ++;
+	    waw_lock.lock();
+	    dead_ctr_lock.lock();
+		node->WAW.push_back(conflictingIns);
+		conflictingIns->OWCount ++;
 
-            //Marks the end of a dead code stream
-            if (checkDeadness(conflictingIns)) {
-                deadStreamCounter ++;
-            }
+		//Marks the end of a dead code stream
+		if (checkDeadness(conflictingIns)) {
+		    deadStreamCounter ++;
+		}
+	    dead_ctr_lock.unlock();
+	    waw_lock.unlock();
         }
-        regFile[regName] = node;
+	reg_file_lock.lock();
+	    regFile[regName] = node;
+	reg_file_lock.unlock();
 
     }
 
@@ -432,8 +556,11 @@ void DeadInstAnalyzer<Impl>::analyzeDeadRegOverwrite (INS_STRUCT *node,
 
 	INS_STRUCT *conflictingIns = regFile[regName];
 	if (conflictingIns != NULL) {
-	    node->RAW.push_back(conflictingIns);
-	    conflictingIns->readCounter++;
+	    //Prodromou: Check if this affects non-threaded execution
+	    raw_lock.lock();
+		node->RAW.push_back(conflictingIns);
+		conflictingIns->readCounter++;
+	    raw_lock.unlock();
 	}
     }
     for (int i=0; i<numW; i++) {
@@ -444,16 +571,24 @@ void DeadInstAnalyzer<Impl>::analyzeDeadRegOverwrite (INS_STRUCT *node,
 
 	INS_STRUCT *conflictingIns = regFile[regName];
 	if (conflictingIns != NULL) {
-	    node->WAW.push_back(conflictingIns);
-	    conflictingIns->OWCount ++;
- 
-	    //Marks the end of a dead code stream
-	    if (checkDeadness(conflictingIns)) {
-		deadStreamCounter ++;
-	    }
+	    //Prodromou: checkDeadness triggers backlog. 
+	    //Prodromou: Safer to include in the lock
+	    waw_lock.lock();
+	    dead_ctr_lock.lock();
+		node->WAW.push_back(conflictingIns);
+		conflictingIns->OWCount ++;
+     
+		//Marks the end of a dead code stream
+		if (checkDeadness(conflictingIns)) {
+		    deadStreamCounter ++;
+		}
+	    dead_ctr_lock.unlock();
+	    waw_lock.unlock();
 	    
 	}
-	regFile[regName] = node;
+	reg_file_lock.lock();
+	    regFile[regName] = node;
+	reg_file_lock.unlock();
     }
 }
 
@@ -484,7 +619,10 @@ void DeadInstAnalyzer<Impl>::analyzeRegSameValueOverwrite (INS_STRUCT *node, Dyn
 	    if (res == reg_data) {
 		DPRINTF (Prodromou, "[sn:%lli] Silent register write (int). Instruction Dead\n", newInst->seqNum);
 		silentRegs++;
-		declareDead(node);
+    
+		dead_ctr_lock.lock();
+		    declareDead(node);
+		dead_ctr_lock.unlock();
 	    }
         }
         else if (reg_id < TheISA::NumIntRegs + TheISA::NumFloatRegs) {
@@ -495,7 +633,10 @@ void DeadInstAnalyzer<Impl>::analyzeRegSameValueOverwrite (INS_STRUCT *node, Dyn
 	    if (res_dbl == reg_data) {
 		DPRINTF (Prodromou, "[sn:%lli] Silent register write (float). Instruction Dead\n", newInst->seqNum);
 		silentRegs++;
-		declareDead(node);
+
+		dead_ctr_lock.lock();
+		    declareDead(node);
+		dead_ctr_lock.unlock();
 	    }
         }
         else 

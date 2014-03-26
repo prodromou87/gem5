@@ -10,12 +10,15 @@
 #include "mem/packet.hh"
 #include "config/the_isa.hh"
 #include "arch/utility.hh"
+#include <thread>
+#include <mutex>
 using namespace std;
 
 struct DerivO3CPUParams;
 
 template<class Impl>
 class DeadInstAnalyzer {
+    friend class threadHelper;
     private:
 
 	typedef typename Impl::O3CPU O3CPU;
@@ -90,6 +93,28 @@ class DeadInstAnalyzer {
 	
 	//Prodromou: List to hold all dead Instructions
 	long long int *deadInstructionsList;	
+
+	//Prodromou: Mutexes for threaded operation
+	mutex raw_lock;
+	mutex waw_lock;
+	mutex dead_ctr_lock;
+	mutex reg_file_lock;
+	mutex print_lock;
+
+	struct thread_struct {
+	    INS_STRUCT *node;
+	    DynInstPtr newInst;
+	    int numW;
+	    int numR;
+	    int *WregNames;
+	    int *RregNames;
+	};
+
+	//Prodromou: Worker thread functions
+	void overReg(thread_struct *my_data);
+	void overMem(thread_struct *my_data);
+	void silentReg(thread_struct *my_data);
+	void silentStore(thread_struct *my_data);
 
     public:
 	DeadInstAnalyzer(O3CPU *cpu_ptr, DerivO3CPUParams *params);
