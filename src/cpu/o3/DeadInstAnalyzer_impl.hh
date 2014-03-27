@@ -27,12 +27,14 @@ void DeadInstAnalyzer<Impl>::overReg(thread_struct *my_data) {
 	UINT64 t = deadInstructions.value();
     dead_ctr_lock.unlock();
     
+    print_lock.lock();
     analyzeDeadRegOverwrite (my_data->node,
 			     my_data->newInst,
 			     my_data->numW,
 			     my_data->numR,
 			     my_data->WregNames,
 			     my_data->RregNames);
+    print_lock.unlock();
     
     dead_ctr_lock.lock();
 	fromOverReg += (deadInstructions.value() - t);
@@ -49,7 +51,9 @@ void DeadInstAnalyzer<Impl>::overMem(thread_struct *my_data)
 	    UINT64 t = deadInstructions.value();
 	dead_ctr_lock.unlock();
         
+	print_lock.lock();
 	analyzeDeadMemRef (my_data->node, my_data->newInst);
+	print_lock.unlock();
         
 	dead_ctr_lock.lock();
 	    fromOverStore += (deadInstructions.value() - t);
@@ -67,9 +71,11 @@ void DeadInstAnalyzer<Impl>::silentReg(thread_struct *my_data)
 	    UINT64 t = deadInstructions.value();
 	dead_ctr_lock.unlock();
 
+	print_lock.lock();
         analyzeRegSameValueOverwrite (my_data->node, 
 				      my_data->newInst, 
 				      my_data->numW);
+	print_lock.unlock();
 
 	dead_ctr_lock.lock();
 	    fromSilentReg += (deadInstructions.value() - t);
@@ -87,7 +93,9 @@ void DeadInstAnalyzer<Impl>::silentStore(thread_struct *my_data)
 	    UINT64 t = deadInstructions.value();
 	dead_ctr_lock.unlock();
 
+	print_lock.lock();
         checkForSilentStore(my_data->node, my_data->newInst);
+	print_lock.unlock();
 
 	dead_ctr_lock.lock();
 	    fromSilentStore += (deadInstructions.value() - t);
@@ -185,7 +193,7 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
     // Also update the (virtual) register file
     if (instructions.size() == STREAM_WINDOW) {
         INS_STRUCT *temp_ptr = instructions.front();
-        clearRegFile(temp_ptr);
+        //clearRegFile(temp_ptr);
         instructions.pop_front();
         delete(temp_ptr);
     }
@@ -277,7 +285,7 @@ template<class Impl>
 void DeadInstAnalyzer<Impl>::clearRegFile(INS_STRUCT *instruction) {
     long long int id = instruction->ID;
 
-    for (typename map<string,INS_STRUCT*>::iterator it=regFile.begin(); it!=regFile.end(); ++it) {
+    for (typename map<long,INS_STRUCT*>::iterator it=regFile.begin(); it!=regFile.end(); ++it) {
         if (it->second == NULL) continue;
         if (it->second->ID == id) {
             if (!(it->second->isMemRef)) it->second = NULL;
@@ -394,6 +402,7 @@ void DeadInstAnalyzer<Impl>::regStats()
 
 template<class Impl>
 void DeadInstAnalyzer<Impl>::checkForSilentStore (INS_STRUCT *node, DynInstPtr newInst) {
+    print_lock.unlock();
 
      //check operation type and return if checker is not activated
     if (op_type < 3) {
@@ -453,6 +462,7 @@ void DeadInstAnalyzer<Impl>::checkForSilentStore (INS_STRUCT *node, DynInstPtr n
     }
     
     delete[] temp;
+    print_lock.lock();
 }
 
 template<class Impl>
@@ -480,6 +490,7 @@ void DeadInstAnalyzer<Impl>::printNodeInfo (INS_STRUCT *node,
 
 template<class Impl>
 void DeadInstAnalyzer<Impl>::analyzeDeadMemRef (INS_STRUCT *node, DynInstPtr newInst) {
+    print_lock.unlock();
 
     //check operation type and return if checker is not activated
     if (op_type < 4) {
@@ -492,9 +503,9 @@ void DeadInstAnalyzer<Impl>::analyzeDeadMemRef (INS_STRUCT *node, DynInstPtr new
     if (newInst->isLoad()) {
         
 	//Option 0
-	//long regName = newInst->effAddr; //Adds a TON of overhead. I don't know why
+	long regName = newInst->effAddr; //Adds a TON of overhead. I don't know why
 	//Option 2
-	regName = static_cast<ostringstream*>( &(ostringstream() << newInst->effAddr) )->str();
+	//regName = static_cast<ostringstream*>( &(ostringstream() << newInst->effAddr) )->str();
 
         DPRINTF(Prodromou, "Load Instruction. Reading From: %#08s\n", regName);
         INS_STRUCT *conflictingIns = regFile[regName];
@@ -509,9 +520,9 @@ void DeadInstAnalyzer<Impl>::analyzeDeadMemRef (INS_STRUCT *node, DynInstPtr new
     else if (newInst->isStore()) {
         // Use the address of the store/load and use that as a register's name
 	//Option 0
-       //long regName = newInst->effAddr; //Adds a TON of overhead. I don't know why
+	long regName = newInst->effAddr; //Adds a TON of overhead. I don't know why
         //Option 2
-        regName = static_cast<ostringstream*>( &(ostringstream() << newInst->effAddr) )->str();
+        //regName = static_cast<ostringstream*>( &(ostringstream() << newInst->effAddr) )->str();
 
         INS_STRUCT *conflictingIns = regFile[regName];
         if (conflictingIns != NULL) {
@@ -533,6 +544,7 @@ void DeadInstAnalyzer<Impl>::analyzeDeadMemRef (INS_STRUCT *node, DynInstPtr new
 
     }
 
+    print_lock.lock();    
 }
 
 template<class Impl>
@@ -541,6 +553,7 @@ void DeadInstAnalyzer<Impl>::analyzeDeadRegOverwrite (INS_STRUCT *node,
 						      int numW, int numR,
 						      int *WregNames,
 						      int *RregNames) {
+    print_lock.unlock();
 
     //check operation type and return if checker is not activated
     if (op_type < 1) {
@@ -550,9 +563,9 @@ void DeadInstAnalyzer<Impl>::analyzeDeadRegOverwrite (INS_STRUCT *node,
     string regName = "";
     for (int i=0; i<numR; i++) {
 	//Option 0
-	//int regName = RregNames[i];
+	int regName = RregNames[i];
         //Option 2
-        regName = static_cast<ostringstream*>( &(ostringstream() << RregNames[i]) )->str();
+        //regName = static_cast<ostringstream*>( &(ostringstream() << RregNames[i]) )->str();
 
 	INS_STRUCT *conflictingIns = regFile[regName];
 	if (conflictingIns != NULL) {
@@ -565,9 +578,9 @@ void DeadInstAnalyzer<Impl>::analyzeDeadRegOverwrite (INS_STRUCT *node,
     }
     for (int i=0; i<numW; i++) {
 	//Option 0
-        //int regName = WregNames[i];
+        int regName = WregNames[i];
         //Option 2
-        regName = static_cast<ostringstream*>( &(ostringstream() << WregNames[i]) )->str();
+        //regName = static_cast<ostringstream*>( &(ostringstream() << WregNames[i]) )->str();
 
 	INS_STRUCT *conflictingIns = regFile[regName];
 	if (conflictingIns != NULL) {
@@ -590,11 +603,13 @@ void DeadInstAnalyzer<Impl>::analyzeDeadRegOverwrite (INS_STRUCT *node,
 	    regFile[regName] = node;
 	reg_file_lock.unlock();
     }
+    print_lock.lock();
 }
 
 template<class Impl>
 void DeadInstAnalyzer<Impl>::analyzeRegSameValueOverwrite (INS_STRUCT *node, DynInstPtr newInst, int numW){
 
+    print_lock.unlock();
      //check operation type and return if checker is not activated
     if (op_type < 2) {
         return;
@@ -642,5 +657,6 @@ void DeadInstAnalyzer<Impl>::analyzeRegSameValueOverwrite (INS_STRUCT *node, Dyn
         else 
             DPRINTF (Prodromou, "Some sort of special register\n");
     }
+    print_lock.lock();
 }
 
