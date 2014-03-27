@@ -93,7 +93,8 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
     node->address = newInst->instAddr();
     node->WRegCount = numW;
     node->isMemRef = newInst->isMemRef();
-    if (newInst->isStore()) node->WRegCount=1; //Fake One output register for stores
+
+    //if (newInst->isStore()) node->WRegCount=1; //Fake One output register for stores -- UPDATE: Why did I do that?
     //Instruction node created 
 
     // Check for room in the instruction window
@@ -101,7 +102,7 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
     // Also update the (virtual) register file
     if (instructions.size() == STREAM_WINDOW) {
         INS_STRUCT *temp_ptr = instructions.front();
-        clearRegFile(temp_ptr);
+        //clearRegFile(temp_ptr); //NOTE This adds a significant overhead. Also it's not necessary since the deadness checks verify that an instruction is still in the window before they proceed. 
         instructions.pop_front();
         delete(temp_ptr);
     }
@@ -146,6 +147,8 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
 	analyzeRegSameValueOverwrite (node, newInst, numW);
 	fromSilentReg += (deadInstructions.value() - t);
     }
+
+    //cout<<"S: "<<regFile.size()<<endl;
 
 //Prodromou: Checks completed
 
@@ -374,11 +377,11 @@ void DeadInstAnalyzer<Impl>::analyzeDeadMemRef (INS_STRUCT *node, DynInstPtr new
     // Reading Memory References => Load Instructions
     // Handling memory address as a register.
     if (newInst->isLoad()) {
-        
 	//Option 0
 	//long regName = newInst->effAddr; //Adds a TON of overhead. I don't know why
 	//Option 2
 	regName = static_cast<ostringstream*>( &(ostringstream() << newInst->effAddr) )->str();
+	//cout<<regName<<endl;
 
         DPRINTF(Prodromou, "Load Instruction. Reading From: %#08s\n", regName);
         INS_STRUCT *conflictingIns = regFile[regName];
@@ -394,7 +397,7 @@ void DeadInstAnalyzer<Impl>::analyzeDeadMemRef (INS_STRUCT *node, DynInstPtr new
        //long regName = newInst->effAddr; //Adds a TON of overhead. I don't know why
         //Option 2
         regName = static_cast<ostringstream*>( &(ostringstream() << newInst->effAddr) )->str();
-
+	//cout<<regName<<endl;
         INS_STRUCT *conflictingIns = regFile[regName];
         if (conflictingIns != NULL) {
             node->WAW.push_back(conflictingIns);
