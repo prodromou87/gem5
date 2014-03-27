@@ -171,7 +171,7 @@ template<class Impl>
 void DeadInstAnalyzer<Impl>::clearRegFile(INS_STRUCT *instruction) {
     long long int id = instruction->ID;
 
-    for (typename map<string,INS_STRUCT*>::iterator it=regFile.begin(); it!=regFile.end(); ++it) {
+    for (typename map<long,INS_STRUCT*>::iterator it=regFile.begin(); it!=regFile.end(); ++it) {
         if (it->second == NULL) continue;
         if (it->second->ID == id) {
             if (!(it->second->isMemRef)) it->second = NULL;
@@ -378,9 +378,9 @@ void DeadInstAnalyzer<Impl>::analyzeDeadMemRef (INS_STRUCT *node, DynInstPtr new
     // Handling memory address as a register.
     if (newInst->isLoad()) {
 	//Option 0
-	//long regName = newInst->effAddr; //Adds a TON of overhead. I don't know why
+	long regName = newInst->effAddr; //Adds a TON of overhead. I don't know why
 	//Option 2
-	regName = static_cast<ostringstream*>( &(ostringstream() << newInst->effAddr) )->str();
+	//string regName = static_cast<ostringstream*>( &(ostringstream() << newInst->effAddr) )->str();
 	//cout<<regName<<endl;
 
         DPRINTF(Prodromou, "Load Instruction. Reading From: %#08s\n", regName);
@@ -394,9 +394,9 @@ void DeadInstAnalyzer<Impl>::analyzeDeadMemRef (INS_STRUCT *node, DynInstPtr new
     else if (newInst->isStore()) {
         // Use the address of the store/load and use that as a register's name
 	//Option 0
-       //long regName = newInst->effAddr; //Adds a TON of overhead. I don't know why
+	long regName = newInst->effAddr; //Adds a TON of overhead. I don't know why
         //Option 2
-        regName = static_cast<ostringstream*>( &(ostringstream() << newInst->effAddr) )->str();
+        //regName = static_cast<ostringstream*>( &(ostringstream() << newInst->effAddr) )->str();
 	//cout<<regName<<endl;
         INS_STRUCT *conflictingIns = regFile[regName];
         if (conflictingIns != NULL) {
@@ -429,9 +429,9 @@ void DeadInstAnalyzer<Impl>::analyzeDeadRegOverwrite (INS_STRUCT *node,
     string regName = "";
     for (int i=0; i<numR; i++) {
 	//Option 0
-	//int regName = RregNames[i];
+	int regName = RregNames[i];
         //Option 2
-        regName = static_cast<ostringstream*>( &(ostringstream() << RregNames[i]) )->str();
+        //regName = static_cast<ostringstream*>( &(ostringstream() << RregNames[i]) )->str();
 
 	INS_STRUCT *conflictingIns = regFile[regName];
 	if (conflictingIns != NULL) {
@@ -441,9 +441,9 @@ void DeadInstAnalyzer<Impl>::analyzeDeadRegOverwrite (INS_STRUCT *node,
     }
     for (int i=0; i<numW; i++) {
 	//Option 0
-        //int regName = WregNames[i];
+        int regName = WregNames[i];
         //Option 2
-        regName = static_cast<ostringstream*>( &(ostringstream() << WregNames[i]) )->str();
+        //regName = static_cast<ostringstream*>( &(ostringstream() << WregNames[i]) )->str();
 
 	INS_STRUCT *conflictingIns = regFile[regName];
 	if (conflictingIns != NULL) {
