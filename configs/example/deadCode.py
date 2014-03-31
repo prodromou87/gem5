@@ -93,6 +93,33 @@ def get_processes(options):
     if options.benchmark:
 	if options.benchmark == 'perlbench':
 	    process = MyBench.perlbench
+	elif options.benchmark == 'bzip2':
+	    process = MyBench.bzip2
+	elif options.benchmark == 'gcc':
+	    process = MyBench.gcc
+	elif options.benchmark == 'mcf':
+	    process = MyBench.mcf
+	elif options.benchmark == 'milc':
+	    process = MyBench.milc
+	elif options.benchmark == 'gobmk':
+	    process = MyBench.gobmk
+	elif options.benchmark == 'hmmer':
+	    process = MyBench.hmmer
+	elif options.benchmark == 'sjeng':
+	    process = MyBench.sjeng
+	elif options.benchmark == 'libquantum':
+	    process = MyBench.libquantum
+	elif options.benchmark == 'h264ref':
+	    process = MyBench.h264ref
+	elif options.benchmark == 'lbm':
+	    process = MyBench.lbm
+	elif options.benchmark == 'sphinx3':
+	    process = MyBench.sphinx3
+	elif options.benchmark == 'specrand':
+	    process = MyBench.specrand
+	else:
+	     print "Error: Unknown Benchmark"
+	     sys.exit(1)
 	
 	multiprocesses.append(process)
 	return multiprocesses, 1
