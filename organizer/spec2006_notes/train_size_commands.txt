@@ -1,0 +1,103 @@
+perlbench:
+----------
+cd /home/aprodrom/SPEC_2006/benchspec/CPU2006/400.perlbench/run/run_base_train_alpha.0000
+../run_base_train_alpha.0000/perlbench_base.alpha -I./lib diffmail.pl 2 550 15 24 23 100 > diffmail.2.550.15.24.23.100.out 2>> diffmail.2.550.15.24.23.100.err
+# Starting run for copy #0
+cd /home/aprodrom/SPEC_2006/benchspec/CPU2006/400.perlbench/run/run_base_train_alpha.0000
+../run_base_train_alpha.0000/perlbench_base.alpha -I./lib perfect.pl b 3 > perfect.b.3.out 2>> perfect.b.3.err
+# Starting run for copy #0
+cd /home/aprodrom/SPEC_2006/benchspec/CPU2006/400.perlbench/run/run_base_train_alpha.0000
+../run_base_train_alpha.0000/perlbench_base.alpha -I. -I./lib scrabbl.pl < scrabbl.in > scrabbl.out 2>> scrabbl.err
+# Starting run for copy #0
+cd /home/aprodrom/SPEC_2006/benchspec/CPU2006/400.perlbench/run/run_base_train_alpha.0000
+../run_base_train_alpha.0000/perlbench_base.alpha -I./lib splitmail.pl 535 13 25 24 1091 > splitmail.535.13.25.24.1091.out 2>> splitmail.535.13.25.24.1091.err
+# Starting run for copy #0
+cd /home/aprodrom/SPEC_2006/benchspec/CPU2006/400.perlbench/run/run_base_train_alpha.0000
+../run_base_train_alpha.0000/perlbench_base.alpha -I. -I./lib suns.pl > suns.out 2>> suns.err
+
+bzip:
+-----
+cd /home/aprodrom/SPEC_2006/benchspec/CPU2006/401.bzip2/run/run_base_train_alpha.0000
+../run_base_train_alpha.0000/bzip2_base.alpha input.program 10 > input.program.out 2>> input.program.err
+# Starting run for copy #0
+cd /home/aprodrom/SPEC_2006/benchspec/CPU2006/401.bzip2/run/run_base_train_alpha.0000
+../run_base_train_alpha.0000/bzip2_base.alpha byoudoin.jpg 5 > byoudoin.jpg.out 2>> byoudoin.jpg.err
+# Starting run for copy #0
+cd /home/aprodrom/SPEC_2006/benchspec/CPU2006/401.bzip2/run/run_base_train_alpha.0000
+../run_base_train_alpha.0000/bzip2_base.alpha input.combined 80 > input.combined.out 2>> input.combined.err
+
+gcc:
+----
+cd /home/aprodrom/SPEC_2006/benchspec/CPU2006/403.gcc/run/run_base_train_alpha.0000
+../run_base_train_alpha.0000/gcc_base.alpha integrate.i -o integrate.s > integrate.out 2>> integrate.err
+
+mcf:
+----
+cd /home/aprodrom/SPEC_2006/benchspec/CPU2006/429.mcf/run/run_base_train_alpha.0000
+../run_base_train_alpha.0000/mcf_base.alpha inp.in
+
+milc:
+-----
+cd /home/aprodrom/SPEC_2006/benchspec/CPU2006/433.milc/run/run_base_train_alpha.0000
+../run_base_train_alpha.0000/milc_base.alpha < su3imp.in > su3imp.out 2>> su3imp.err
+
+gobmk:
+------
+cd /home/aprodrom/SPEC_2006/benchspec/CPU2006/445.gobmk/run/run_base_train_alpha.0000
+../run_base_train_alpha.0000/gobmk_base.alpha --quiet --mode gtp < arb.tst > arb.out 2>> arb.err
+# Starting run for copy #0
+cd /home/aprodrom/SPEC_2006/benchspec/CPU2006/445.gobmk/run/run_base_train_alpha.0000
+../run_base_train_alpha.0000/gobmk_base.alpha --quiet --mode gtp < arend.tst > arend.out 2>> arend.err
+# Starting run for copy #0
+cd /home/aprodrom/SPEC_2006/benchspec/CPU2006/445.gobmk/run/run_base_train_alpha.0000
+../run_base_train_alpha.0000/gobmk_base.alpha --quiet --mode gtp < arion.tst > arion.out 2>> arion.err
+# Starting run for copy #0
+cd /home/aprodrom/SPEC_2006/benchspec/CPU2006/445.gobmk/run/run_base_train_alpha.0000
+../run_base_train_alpha.0000/gobmk_base.alpha --quiet --mode gtp < atari_atari.tst > atari_atari.out 2>> atari_atari.err
+# Starting run for copy #0
+cd /home/aprodrom/SPEC_2006/benchspec/CPU2006/445.gobmk/run/run_base_train_alpha.0000
+../run_base_train_alpha.0000/gobmk_base.alpha --quiet --mode gtp < blunder.tst > blunder.out 2>> blunder.err
+# Starting run for copy #0
+cd /home/aprodrom/SPEC_2006/benchspec/CPU2006/445.gobmk/run/run_base_train_alpha.0000
+../run_base_train_alpha.0000/gobmk_base.alpha --quiet --mode gtp < buzco.tst > buzco.out 2>> buzco.err
+# Starting run for copy #0
+cd /home/aprodrom/SPEC_2006/benchspec/CPU2006/445.gobmk/run/run_base_train_alpha.0000
+../run_base_train_alpha.0000/gobmk_base.alpha --quiet --mode gtp < nicklas2.tst > nicklas2.out 2>> nicklas2.err
+# Starting run for copy #0
+cd /home/aprodrom/SPEC_2006/benchspec/CPU2006/445.gobmk/run/run_base_train_alpha.0000
+../run_base_train_alpha.0000/gobmk_base.alpha --quiet --mode gtp < nicklas4.tst > nicklas4.out 2>> nicklas4.err
+
+hmmer:
+------
+cd /home/aprodrom/SPEC_2006/benchspec/CPU2006/456.hmmer/run/run_base_train_alpha.0000
+../run_base_train_alpha.0000/hmmer_base.alpha --fixed 0 --mean 425 --num 85000 --sd 300 --seed 0 leng100.hmm > leng100.out 2>> leng100.err
+
+sjeng:
+------
+cd /home/aprodrom/SPEC_2006/benchspec/CPU2006/458.sjeng/run/run_base_train_alpha.0000
+../run_base_train_alpha.0000/sjeng_base.alpha train.txt > train.out 2>> train.err
+
+libquantum:
+-----------
+cd /home/aprodrom/SPEC_2006/benchspec/CPU2006/462.libquantum/run/run_base_train_alpha.0000
+../run_base_train_alpha.0000/libquantum_base.alpha 143 25 > train.out 2>> train.err
+
+h264ref:
+--------
+cd /home/aprodrom/SPEC_2006/benchspec/CPU2006/464.h264ref/run/run_base_train_alpha.0001
+../run_base_train_alpha.0001/h264ref_base.alpha -d foreman_train_encoder_baseline.cfg > foreman_train_baseline_encodelog.out 2>> foreman_train_baseline_encodelog.err
+
+lbm:
+----
+cd /home/aprodrom/SPEC_2006/benchspec/CPU2006/470.lbm/run/run_base_train_alpha.0000
+../run_base_train_alpha.0000/lbm_base.alpha 300 reference.dat 0 1 100_100_130_cf_b.of > lbm.out 2>> lbm.err
+
+sphinx3:
+--------
+cd /home/aprodrom/SPEC_2006/benchspec/CPU2006/482.sphinx3/run/run_base_train_alpha.0001
+../run_base_train_alpha.0001/sphinx_livepretend_base.alpha ctlfile . args.an4 > an4.log 2>> an4.err
+
+specrand:
+-------------
+cd /home/aprodrom/SPEC_2006/benchspec/CPU2006/998.specrand/run/run_base_train_alpha.0000
+../run_base_train_alpha.0000/specrand_base.alpha 1 3 > rand.3.out 2>> rand.3.err

@@ -64,3 +64,8 @@ class AtomicSimpleCPU(BaseSimpleCPU):
     simpoint_profile = Param.Bool(False, "Generate SimPoint BBVs")
     simpoint_interval = Param.UInt64(100000000, "SimPoint Interval Size (insts)")
     simpoint_profile_file = Param.String("simpoint.bb.gz", "SimPoint BBV file")
+
+    #Prodromou: Setting the size of the instruction Window (DIA)
+    InstWindow = Param.UInt64(200000, "Size of the Instruction Window (DIA)");
+    OpType = Param.Int(4, "The operation type for the DIA")
+    #Prodromou

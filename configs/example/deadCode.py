@@ -62,8 +62,9 @@ import MemConfig
 from Caches import *
 from cpu2000 import *
 
-#Prodromou: Include MyBench.pl file
-import MyBench
+#Prodromou: Include SPEC2k6 files
+import SPEC2k6_train
+import SPEC2k6_ref
 
 def get_processes(options):
     """Interprets provided options and returns a list of processes"""
@@ -86,40 +87,74 @@ def get_processes(options):
 
     # Prodromou: Add required options here so I don't have to 
     # re-write them every time
-    options.cpu_type = "detailed"
-    options.caches = True
+    #options.cpu_type = "detailed"
+    #options.caches = True
 
     #Prodromou: Invoke the benchmarks
     if options.benchmark:
-	if options.benchmark == 'perlbench':
-	    process = MyBench.perlbench
-	elif options.benchmark == 'bzip2':
-	    process = MyBench.bzip2
-	elif options.benchmark == 'gcc':
-	    process = MyBench.gcc
-	elif options.benchmark == 'mcf':
-	    process = MyBench.mcf
-	elif options.benchmark == 'milc':
-	    process = MyBench.milc
-	elif options.benchmark == 'gobmk':
-	    process = MyBench.gobmk
-	elif options.benchmark == 'hmmer':
-	    process = MyBench.hmmer
-	elif options.benchmark == 'sjeng':
-	    process = MyBench.sjeng
-	elif options.benchmark == 'libquantum':
-	    process = MyBench.libquantum
-	elif options.benchmark == 'h264ref':
-	    process = MyBench.h264ref
-	elif options.benchmark == 'lbm':
-	    process = MyBench.lbm
-	elif options.benchmark == 'sphinx3':
-	    process = MyBench.sphinx3
-	elif options.benchmark == 'specrand':
-	    process = MyBench.specrand
+	if options.bench_size == 'train':
+	    if options.benchmark == 'perlbench':
+		process = SPEC2k6_train.perlbench
+	    elif options.benchmark == 'bzip2':
+		process = SPEC2k6_train.bzip2
+	    elif options.benchmark == 'gcc':
+		process = SPEC2k6_train.gcc
+	    elif options.benchmark == 'mcf':
+		process = SPEC2k6_train.mcf
+	    elif options.benchmark == 'milc':
+		process = SPEC2k6_train.milc
+	    elif options.benchmark == 'gobmk':
+		process = SPEC2k6_train.gobmk
+	    elif options.benchmark == 'hmmer':
+		process = SPEC2k6_train.hmmer
+	    elif options.benchmark == 'sjeng':
+		process = SPEC2k6_train.sjeng
+	    elif options.benchmark == 'libquantum':
+		process = SPEC2k6_train.libquantum
+	    elif options.benchmark == 'h264ref':
+		process = SPEC2k6_train.h264ref
+	    elif options.benchmark == 'lbm':
+		process = SPEC2k6_train.lbm
+	    elif options.benchmark == 'sphinx3':
+		process = SPEC2k6_train.sphinx3
+	    elif options.benchmark == 'specrand':
+		process = SPEC2k6_train.specrand
+	    else:
+		 print "Error: Unknown Benchmark"
+		 sys.exit(1)
+	elif options.bench_size == 'ref':
+	    if options.benchmark == 'perlbench':
+                process = SPEC2k6_ref.perlbench
+            elif options.benchmark == 'bzip2':
+                process = SPEC2k6_ref.bzip2
+            elif options.benchmark == 'gcc':
+                process = SPEC2k6_ref.gcc
+            elif options.benchmark == 'mcf':
+                process = SPEC2k6_ref.mcf
+            elif options.benchmark == 'milc':
+                process = SPEC2k6_ref.milc
+            elif options.benchmark == 'gobmk':
+                process = SPEC2k6_ref.gobmk
+            elif options.benchmark == 'hmmer':
+                process = SPEC2k6_ref.hmmer
+            elif options.benchmark == 'sjeng':
+                process = SPEC2k6_ref.sjeng
+            elif options.benchmark == 'libquantum':
+                process = SPEC2k6_ref.libquantum
+            elif options.benchmark == 'h264ref':
+                process = SPEC2k6_ref.h264ref
+            elif options.benchmark == 'lbm':
+                process = SPEC2k6_ref.lbm
+            elif options.benchmark == 'sphinx3':
+                process = SPEC2k6_ref.sphinx3
+            elif options.benchmark == 'specrand':
+                process = SPEC2k6_ref.specrand
+            else:
+                 print "Error: Unknown Benchmark"
+                 sys.exit(1)
 	else:
-	     print "Error: Unknown Benchmark"
-	     sys.exit(1)
+	    print "Error: Not supported benchmark size"
+	    sys.exit(1)
 	
 	multiprocesses.append(process)
 	return multiprocesses, 1

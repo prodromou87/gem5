@@ -108,6 +108,8 @@ def addCommonOptions(parser):
 		      help="The operation type for the DIA (Default is 4): [1] -> OverRegs only, [2] -> + SilentRegs, [3] -> + OverMem, [4] -> + SilentStores")
     parser.add_option("-b", "--benchmark", default="",
                  help="The benchmark to be loaded.")
+    parser.add_option("--bench-size", default="ref",
+		 help="The size of the benchmark <train/ref>")
 			    
     #PRODROMOU
     parser.add_option("--fastmem", action="store_true")
