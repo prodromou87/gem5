@@ -1,4 +1,4 @@
-<map version="0.9.0">
+<map version="1.0.1">
 <!-- To view this file, download free mind mapping software FreeMind from http://freemind.sourceforge.net -->
 <node COLOR="#ff0000" CREATED="1397161911493" ID="ID_1868557972" MODIFIED="1397188008000" TEXT="PhD UCSD 2013-??">
 <edge STYLE="sharp_bezier"/>
@@ -23,8 +23,7 @@
       Modify mem/packet.cc to stop showing warnings about discontiguous addresses (Takes a lot of output space) -- The code works so I might just leave it as is
     </p>
   </body>
-</html>
-</richcontent>
+</html></richcontent>
 <edge STYLE="sharp_bezier"/>
 <icon BUILTIN="messagebox_warning"/>
 </node>
@@ -39,11 +38,10 @@
   </head>
   <body>
     <p>
-      The folder &quot;spek2k6_simpoints&quot; at matricks includes all the work for generating checkpoints, along with scripts that automate the procedure.
+      The folder "spek2k6_simpoints" at matricks includes all the work for generating checkpoints, along with scripts that automate the procedure.
     </p>
   </body>
-</html>
-</richcontent>
+</html></richcontent>
 <edge STYLE="sharp_bezier"/>
 <node CREATED="1397177367928" ID="ID_1090816176" LINK="aprodrom@matricks.ucsd.edu:spek2k6_simpoints/" MODIFIED="1397188007999" TEXT="Simpoint Profiling">
 <edge STYLE="sharp_bezier"/>
@@ -71,8 +69,7 @@
       Experiment Folder (matricks): /home/aprodrom/experiments/DeadCodeElimination/exp_2014_06_04
     </p>
   </body>
-</html>
-</richcontent>
+</html></richcontent>
 <edge STYLE="sharp_bezier"/>
 <icon BUILTIN="go"/>
 </node>
@@ -86,10 +83,10 @@
       Experiment Folder (matricks): /home/aprodrom/experiments/DeadCodeElimination/exp_2014_10_04
     </p>
   </body>
-</html>
-</richcontent>
+</html></richcontent>
 <edge STYLE="sharp_bezier"/>
 </node>
+<node CREATED="1397242245117" ID="ID_2863529" MODIFIED="1397242253270" TEXT="Impact of individual checkers"/>
 </node>
 <node CREATED="1397177170777" ID="ID_1069340594" MODIFIED="1397188007997" TEXT="Paper">
 <edge STYLE="sharp_bezier"/>
