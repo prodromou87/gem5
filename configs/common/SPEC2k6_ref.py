@@ -72,3 +72,95 @@ sphinx3.cmd = [sphinx3.executable] + ['ctlfile', '.', 'args.an4']
 specrand = LiveProcess()
 specrand.executable =  './specrand_base.alpha'
 specrand.cmd = [specrand.executable] + ['1255432124', '234923']
+
+# FORTRAN BENCHMARKS
+bwaves = LiveProcess()
+bwaves.executable = './bwaves_base.alpha'
+bwaves.cmd = [bwaves.executable]
+
+gamess=LiveProcess()
+gamess.executable = './gamess_base.alpha'
+stdin='triazolium.config'
+gamess.cmd = [gamess.executable]
+gamess.input=stdin
+
+zeusmp = LiveProcess()
+zeusmp.executable = './zeusmp_base.alpha'
+zeusmp.cmd = [zeusmp.executable]
+
+leslie3d=LiveProcess()
+leslie3d.executable = './leslie3d_base.alpha'
+stdin='leslie3d.in'
+leslie3d.cmd = [gamess.executable]
+leslie3d.input=stdin
+
+GemsFDTD = LiveProcess()
+GemsFDTD.executable = './GemsFDTD_base.alpha'
+GemsFDTD.cmd = [GemsFDTD.executable]
+
+tonto = LiveProcess()
+tonto.executable = './tonto_base.alpha'
+tonto.cmd = [tonto.executable]
+
+# CPP BENCHMARKS
+namd = LiveProcess()
+namd.executable =  './namd_base.alpha'
+namd.cmd = [namd.executable] + ['--input', 'namd.input', '--iterations', '38', '--output', 'namd.out']
+
+dealII = LiveProcess()
+dealII.executable =  './dealII_base.alpha'
+dealII.cmd = [dealII.executable] + ['23']
+
+soplex = LiveProcess()
+soplex.executable =  './soplex_base.alpha'
+soplex.cmd = [soplex.executable] + ['-s1', '-e', '-m45000', 'pds-50.mps']
+
+povray = LiveProcess()
+povray.executable =  './povray_base.alpha'
+povray.cmd = [povray.executable] + ['SPEC-benchmark-ref.ini']
+
+omnetpp = LiveProcess()
+omnetpp.executable =  './omnetpp_base.alpha'
+omnetpp.cmd = [omnetpp.executable] + ['omnetpp.ini']
+
+astar = LiveProcess()
+astar.executable =  './astar_base.alpha'
+astar.cmd = [astar.executable] + ['BigLakes2048.cfg']
+
+xalancbmk = LiveProcess()
+xalancbmk.executable =  './Xalan_base.alpha'
+xalancbmk.cmd = [xalancbmk.executable] + ['-v', 't5.xml', 'xalanc.xsl']
+
+# MIXED BENCHMARKS
+gromacs = LiveProcess()
+gromacs.executable =  './gromacs_base.alpha'
+gromacs.cmd = [gromacs.executable] + ['-silent', '-deffnm', 'gromacs', '-nice', '0']
+
+cactusADM = LiveProcess()
+cactusADM.executable =  './cactusADM_base.alpha'
+cactusADM.cmd = [cactusADM.executable] + ['benchADM.par']
+
+calculix = LiveProcess()
+calculix.executable =  './calculix_base.alpha'
+calculix.cmd = [calculix.executable] + ['-i', 'hyperviscoplastic']
+
+wrf = LiveProcess()
+wrf.executable = './wrf_base.alpha'
+wrf.cmd = [wrf.executable]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

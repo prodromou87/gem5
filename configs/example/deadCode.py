@@ -149,6 +149,40 @@ def get_processes(options):
                 process = SPEC2k6_ref.sphinx3
             elif options.benchmark == 'specrand':
                 process = SPEC2k6_ref.specrand
+            elif options.benchmark == 'bwaves':
+                process = SPEC2k6_ref.bwaves
+            elif options.benchmark == 'gamess':
+                process = SPEC2k6_ref.gamess
+            elif options.benchmark == 'zeusmp':
+                process = SPEC2k6_ref.zeusmp
+            elif options.benchmark == 'leslie3d':
+                process = SPEC2k6_ref.leslie3d
+            elif options.benchmark == 'GemsFDTD':
+                process = SPEC2k6_ref.GemsFDTD
+            elif options.benchmark == 'tonto':
+                process = SPEC2k6_ref.tonto
+            elif options.benchmark == 'namd':
+                process = SPEC2k6_ref.namd
+            elif options.benchmark == 'dealII':
+                process = SPEC2k6_ref.dealII
+            elif options.benchmark == 'soplex':
+                process = SPEC2k6_ref.soplex
+            elif options.benchmark == 'povray':
+                process = SPEC2k6_ref.povray
+            elif options.benchmark == 'omnetpp':
+                process = SPEC2k6_ref.omnetpp
+            elif options.benchmark == 'astar':
+                process = SPEC2k6_ref.astar
+            elif options.benchmark == 'xalancbmk':
+                process = SPEC2k6_ref.xalancbmk
+            elif options.benchmark == 'gromacs':
+                process = SPEC2k6_ref.gromacs
+            elif options.benchmark == 'cactusADM':
+                process = SPEC2k6_ref.cactusADM
+            elif options.benchmark == 'calculix':
+                process = SPEC2k6_ref.calculix
+            elif options.benchmark == 'wrf':
+                process = SPEC2k6_ref.wrf
             else:
                  print "Error: Unknown Benchmark"
                  sys.exit(1)
