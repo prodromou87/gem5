@@ -265,6 +265,13 @@ else:
 (CPUClass, test_mem_mode, FutureClass) = Simulation.setCPUClass(options)
 CPUClass.numThreads = numThreads
 
+#PRODROMOU: For the instruction window to work when restoring from checkpoint
+if FutureClass != None:
+    if options.dia_inst_window:
+        FutureClass.InstWindow = options.dia_inst_window
+    if options.dia_operation_type:
+        FutureClass.OpType = options.dia_operation_type
+
 MemClass = Simulation.setMemClass(options)
 
 # Check -- do not allow SMT with multiple CPUs
