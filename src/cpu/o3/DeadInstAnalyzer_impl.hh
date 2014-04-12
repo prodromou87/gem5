@@ -40,6 +40,8 @@ DeadInstAnalyzer<Impl>::DeadInstAnalyzer(O3CPU *cpu_ptr, DerivO3CPUParams *param
     // Register this object's statistics
     regStats();
 
+	cout<<"DIA Initialized with instruction window size of "<<STREAM_WINDOW<<endl;
+
     DPRINTF (DeadInstAnalyzer, "Constructor: Created window of size %lld. Operation Type: %d\n", STREAM_WINDOW, op_type);
 
 /*
