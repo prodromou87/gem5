@@ -3,7 +3,7 @@
 <node COLOR="#ff0000" CREATED="1397161911493" ID="ID_1868557972" MODIFIED="1397188008000" TEXT="PhD UCSD 2013-??">
 <edge STYLE="sharp_bezier"/>
 <icon BUILTIN="gohome"/>
-<node CREATED="1397162009313" ID="ID_1968811078" MODIFIED="1397188008000" POSITION="right" TEXT="Dead Code Elimination">
+<node CREATED="1397162009313" ID="ID_1968811078" MODIFIED="1397249814383" POSITION="right" TEXT="Dead Code Elimination">
 <edge STYLE="sharp_bezier"/>
 <node CREATED="1397177316151" ID="ID_243438931" MODIFIED="1397188008000" TEXT="Source Code">
 <edge STYLE="sharp_bezier"/>
@@ -31,17 +31,18 @@
 <edge STYLE="sharp_bezier"/>
 </node>
 </node>
-<node CREATED="1397177359832" ID="ID_1948826404" LINK="aprodrom@matricks.ucsd.edu:~/spek2k6_simpoints/checkpoints" MODIFIED="1397188007999" TEXT="Simpoints">
+<node CREATED="1397177359832" ID="ID_1948826404" LINK="aprodrom@matricks.ucsd.edu:~/spek2k6_simpoints/checkpoints" MODIFIED="1397249789224" TEXT="Simpoints">
 <richcontent TYPE="NOTE"><html>
   <head>
     
   </head>
   <body>
     <p>
-      The folder "spek2k6_simpoints" at matricks includes all the work for generating checkpoints, along with scripts that automate the procedure.
+      The folder &quot;spek2k6_simpoints&quot; at matricks includes all the work for generating checkpoints, along with scripts that automate the procedure.
     </p>
   </body>
-</html></richcontent>
+</html>
+</richcontent>
 <edge STYLE="sharp_bezier"/>
 <node CREATED="1397177367928" ID="ID_1090816176" LINK="aprodrom@matricks.ucsd.edu:spek2k6_simpoints/" MODIFIED="1397188007999" TEXT="Simpoint Profiling">
 <edge STYLE="sharp_bezier"/>
@@ -57,7 +58,22 @@
 <icon BUILTIN="go"/>
 </node>
 </node>
-<node CREATED="1397162022881" ID="ID_1329512717" MODIFIED="1397188007997" TEXT="Experiments">
+<node CREATED="1397162022881" ID="ID_1329512717" MODIFIED="1397249828514" TEXT="Experiments">
+<richcontent TYPE="NOTE"><html>
+  <head>
+    
+  </head>
+  <body>
+    <table border="0" style="border-bottom-style: solid; border-top-width: 0; border-bottom-width: 0; border-right-style: solid; width: 80%; border-left-style: solid; border-top-style: solid; border-right-width: 0; border-left-width: 0">
+      <tr>
+        <td>
+          Progress Excel sheet in the gem5 organizer folder. Shows the progress of each benchmark for each experiment
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
+</richcontent>
 <edge STYLE="sharp_bezier"/>
 <node CREATED="1397177623542" ID="ID_1189086345" MODIFIED="1397188007997" TEXT="Dead instruction count">
 <richcontent TYPE="NOTE"><html>
@@ -73,7 +89,7 @@
 <edge STYLE="sharp_bezier"/>
 <icon BUILTIN="go"/>
 </node>
-<node CREATED="1397177633398" ID="ID_814794738" MODIFIED="1397188007997" TEXT="Impact of inst. window size">
+<node CREATED="1397177633398" ID="ID_814794738" MODIFIED="1397249700877" TEXT="Impact of inst. window size">
 <richcontent TYPE="NOTE"><html>
   <head>
     
@@ -85,10 +101,11 @@
   </body>
 </html></richcontent>
 <edge STYLE="sharp_bezier"/>
+<icon BUILTIN="go"/>
 </node>
 <node CREATED="1397242245117" ID="ID_2863529" MODIFIED="1397242253270" TEXT="Impact of individual checkers"/>
 </node>
-<node CREATED="1397177170777" ID="ID_1069340594" MODIFIED="1397188007997" TEXT="Paper">
+<node CREATED="1397177170777" ID="ID_1069340594" MODIFIED="1397249817671" TEXT="Paper">
 <edge STYLE="sharp_bezier"/>
 <node CREATED="1397178388801" ID="ID_1007667938" MODIFIED="1397188007997" TEXT="Title">
 <edge STYLE="sharp_bezier"/>
