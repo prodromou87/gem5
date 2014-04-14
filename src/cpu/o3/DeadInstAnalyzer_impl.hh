@@ -76,25 +76,33 @@ void DeadInstAnalyzer<Impl>::deadInstMet() {
 
 template<class Impl>
 void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
-    
+
     //Get the affected registers
     int numW = newInst->numDestRegs();
     int numR = newInst->numSrcRegs();
 
-    int *WregNames = new int[numW];
-    int *RregNames = new int[numR];   
-    for (int i=0; i<numW; i++) WregNames[i] = (int)(newInst->destRegIdx(i));
-    for (int i=0; i<numR; i++) RregNames[i] = (int)(newInst->srcRegIdx(i));
-    //Affected registers (if any) are here
-
-    totalInstructions ++;
-    
     //Create new Instruction node
     INS_STRUCT *node = new INS_STRUCT;
     node->ID = newInst->seqNum;
     node->address = newInst->instAddr();
     node->WRegCount = numW;
-    node->isMemRef = newInst->isMemRef();
+    node->isMemRef = newInst->isStore();
+    node->Wregs = new int[numW];
+    if (node->isMemRef) node->effAddr = newInst->effAddr;
+    else node->effAddr = -1;
+   
+
+    int *WregNames = new int[numW];
+    int *RregNames = new int[numR];   
+    for (int i=0; i<numW; i++) {
+	WregNames[i] = (int)(newInst->destRegIdx(i));
+	node->Wregs[i] = WregNames[i];
+    }
+    for (int i=0; i<numR; i++) RregNames[i] = (int)(newInst->srcRegIdx(i));
+    //Affected registers (if any) are here
+
+    totalInstructions ++;
+    
 
     //if (newInst->isStore()) node->WRegCount=1; //Fake One output register for stores -- UPDATE: Why did I do that?
     //Instruction node created 
@@ -171,8 +179,25 @@ remove any trace of that instruction
 */
 template<class Impl>
 void DeadInstAnalyzer<Impl>::clearRegFile(INS_STRUCT *instruction) {
-    long long int id = instruction->ID;
 
+    long long int id = instruction->ID;
+    
+    if (instruction->isMemRef) {
+	long regName = instruction->effAddr;
+	INS_STRUCT *temp = regFile[regName];
+	//temp CANNOT BE NULL -- but regFile might be pointing to other instruction
+	if ((temp != NULL) && (temp->ID == id)) regFile[regName] = NULL;
+    }
+    else {
+	for (int i=0; i<instruction->WRegCount; i++) {
+	    long regName = instruction->Wregs[i];
+	    INS_STRUCT *temp = regFile[regName];
+	    //temp CANNOT BE NULL -- but regFile might be pointing to other instruction
+	    if (temp->ID == id) regFile[regName] = NULL;
+	}
+    }
+
+/*
     for (typename map<long,INS_STRUCT*>::iterator it=regFile.begin(); it!=regFile.end(); ++it) {
         if (it->second == NULL) continue;
         if (it->second->ID == id) {
@@ -182,6 +207,7 @@ void DeadInstAnalyzer<Impl>::clearRegFile(INS_STRUCT *instruction) {
 	    }
         }
     }
+*/
 }
 
 template<class Impl>
@@ -375,7 +401,6 @@ void DeadInstAnalyzer<Impl>::analyzeDeadMemRef (INS_STRUCT *node, DynInstPtr new
         return;
     }
 
-    string regName = "";
     // Reading Memory References => Load Instructions
     // Handling memory address as a register.
     if (newInst->isLoad()) {
@@ -428,10 +453,9 @@ void DeadInstAnalyzer<Impl>::analyzeDeadRegOverwrite (INS_STRUCT *node,
 	return; 
     }
 
-    string regName = "";
     for (int i=0; i<numR; i++) {
 	//Option 0
-	int regName = RregNames[i];
+	long regName = RregNames[i];
         //Option 2
         //regName = static_cast<ostringstream*>( &(ostringstream() << RregNames[i]) )->str();
 
@@ -443,7 +467,7 @@ void DeadInstAnalyzer<Impl>::analyzeDeadRegOverwrite (INS_STRUCT *node,
     }
     for (int i=0; i<numW; i++) {
 	//Option 0
-        int regName = WregNames[i];
+        long regName = WregNames[i];
         //Option 2
         //regName = static_cast<ostringstream*>( &(ostringstream() << WregNames[i]) )->str();
 
@@ -454,6 +478,7 @@ void DeadInstAnalyzer<Impl>::analyzeDeadRegOverwrite (INS_STRUCT *node,
  
 	    //Marks the end of a dead code stream
 	    if (checkDeadness(conflictingIns)) {
+		assert (newInst->seqNum != conflictingIns->ID);
 		deadStreamCounter ++;
 	    }
 	    

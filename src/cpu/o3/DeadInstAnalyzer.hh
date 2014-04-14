@@ -36,6 +36,9 @@ class DeadInstAnalyzer {
 
 	    long long int address;
 	    bool isMemRef; //Set to true if the instruction is Memory Reference (Load/Store)
+
+	    int *Wregs;
+	    UINT64 effAddr;
 	};
 
 	map <long, INS_STRUCT*> regFile; // Holds the last writer instruction for each reg
