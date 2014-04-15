@@ -126,9 +126,9 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
 /*
     NOTE: op_type defines the checks
 	op_type = 1 => Only OverReg check
-	op_type = 2 => + SilentRegs check
+	op_type = 2 => + OverStores check
 	op_type = 3 => + SilentStores check
-	op_type = 4 => + OverMem check (all checkers active)
+	op_type = 4 => + SilentRegs check (all checkers active)
 */
 
     //Check for overwrites
@@ -397,7 +397,7 @@ template<class Impl>
 void DeadInstAnalyzer<Impl>::analyzeDeadMemRef (INS_STRUCT *node, DynInstPtr newInst) {
 
     //check operation type and return if checker is not activated
-    if (op_type < 4) {
+    if (op_type < 2) {
         return;
     }
 
@@ -491,7 +491,7 @@ template<class Impl>
 void DeadInstAnalyzer<Impl>::analyzeRegSameValueOverwrite (INS_STRUCT *node, DynInstPtr newInst, int numW){
 
      //check operation type and return if checker is not activated
-    if (op_type < 2) {
+    if (op_type < 4) {
         return;
     }
 
