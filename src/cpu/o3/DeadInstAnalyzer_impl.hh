@@ -112,7 +112,7 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
     // Also update the (virtual) register file
     if (instructions.size() == STREAM_WINDOW) {
         INS_STRUCT *temp_ptr = instructions.front();
-        //clearRegFile(temp_ptr); //NOTE This adds a significant overhead. Also it's not necessary since the deadness checks verify that an instruction is still in the window before they proceed. 
+        clearRegFile(temp_ptr); //NOTE This adds a significant overhead. Also it's not necessary since the deadness checks verify that an instruction is still in the window before they proceed. 
         instructions.pop_front();
         delete(temp_ptr);
     }
