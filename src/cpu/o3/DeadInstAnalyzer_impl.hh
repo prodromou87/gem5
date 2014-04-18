@@ -238,7 +238,7 @@ template<class Impl>
 void DeadInstAnalyzer<Impl>::declareDead (INS_STRUCT *instruction) {
     DPRINTF(DeadInstAnalyzer, "Instruction Dead: %lld\n", instruction->ID);
 
-    cout<<"D "<<instruction->ID<<endl;
+    //cout<<"D "<<instruction->ID<<endl;
 
     deadInsCounter ++;
 
