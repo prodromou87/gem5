@@ -158,7 +158,6 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
 	fromSilentReg += (deadInstructions.value() - t);
     }
 
-    //cout<<"S: "<<regFile.size()<<endl;
 
 //Prodromou: Checks completed
 
@@ -185,7 +184,6 @@ void DeadInstAnalyzer<Impl>::clearRegFile(INS_STRUCT *instruction) {
     if (instruction->isMemRef) {
 	long regName = instruction->effAddr;
 	INS_STRUCT *temp = regFile[regName];
-	//temp CANNOT BE NULL -- but regFile might be pointing to other instruction
 	if ((temp != NULL) && (temp->ID == id)) regFile[regName] = NULL;
     }
     else {
@@ -193,7 +191,9 @@ void DeadInstAnalyzer<Impl>::clearRegFile(INS_STRUCT *instruction) {
 	    long regName = instruction->Wregs[i];
 	    INS_STRUCT *temp = regFile[regName];
 	    //temp CANNOT BE NULL -- but regFile might be pointing to other instruction
-	    if (temp->ID == id) regFile[regName] = NULL;
+	    if (temp->ID == id) {
+		regFile[regName] = NULL;
+	    }
 	}
     }
 
@@ -221,7 +221,7 @@ bool DeadInstAnalyzer<Impl>::checkDeadness (INS_STRUCT *instruction) {
         //Instruction is Dead
 	if (instruction->isMemRef) overStores++;
 	else overRegs++;
-	
+
 	declareDead(instruction);
         return true;
     }
@@ -238,6 +238,8 @@ template<class Impl>
 void DeadInstAnalyzer<Impl>::declareDead (INS_STRUCT *instruction) {
     DPRINTF(DeadInstAnalyzer, "Instruction Dead: %lld\n", instruction->ID);
 
+    cout<<"D "<<instruction->ID<<endl;
+
     deadInsCounter ++;
 
     //For Simulator's statistics
@@ -249,11 +251,20 @@ void DeadInstAnalyzer<Impl>::declareDead (INS_STRUCT *instruction) {
     // FIXED: There is no need to do this IF THERE IS ONLY ONE output register. Otherwise I need to take care of it. REASON: The instruction that triggered backlog is dead, thus overwritten. Consequently all WAW instructions are still overwritten.
 
     //DECREASE THE COUNTER IN ALL RAWs
-    for (typename deque<INS_STRUCT*>::iterator it=(instruction->RAW).begin(); it != (instruction->RAW).end(); ++it) {
-        if ((*it)->ID < currentHead) continue;
+    for (typename deque<pair<UINT64, INS_STRUCT*> >::iterator it=(instruction->RAW).begin(); it != (instruction->RAW).end(); ++it) {
+	DPRINTF (DeadInstAnalyzer, "Instruction %lld: RAW element: %lld\n", instruction->ID, (it->second)->ID);
+	if ((it->first) != ((it->second)->ID)) { //Memory Aliasing Detected
+	    DPRINTF(DeadInstAnalyzer, "Memory Aliasing Detected. Skipping computation...\n");
+	    continue;
+	}
+        else if ((it->second)->ID < currentHead) {
+	    DPRINTF (DeadInstAnalyzer, "Exceeds ins. window size. Continuing...\n");
+	    continue;
+	}
         else {
-            (*it)->readCounter --;
-            checkDeadness (*it);
+            (it->second)->readCounter --;
+	    DPRINTF (DeadInstAnalyzer, "Recursively checking instruction %lld\n", (it->second)->ID);
+            checkDeadness (it->second);
         }
     }
 }
@@ -390,7 +401,7 @@ void DeadInstAnalyzer<Impl>::printNodeInfo (INS_STRUCT *node,
     DPRINTF(Prodromou, "Writes to: %s\n", s1.str());
     DPRINTF(Prodromou, "Reads from: %s\n", s2.str());
     DPRINTF(Prodromou, "1: %d 2: %d 3: %d 4: %d 5: %d\n", newInst->isMemRef(), newInst->isLoad(), newInst->isStore(), newInst->isStoreConditional(), newInst->doneEACalc());
-    DPRINTF(Prodromou, "Addr: %#x, Eff. Addr: %#x, Phys. addr: %#x\n", newInst->instAddr(), newInst->effAddr, newInst->physEffAddr);
+    DPRINTF(Prodromou, "Addr: %#x, Eff. Addr: %#x, Phys. addr: %#x, Machine Address:%#x\n", newInst->instAddr(), newInst->effAddr, newInst->physEffAddr, node);
 }
 
 template<class Impl>
@@ -408,12 +419,12 @@ void DeadInstAnalyzer<Impl>::analyzeDeadMemRef (INS_STRUCT *node, DynInstPtr new
 	long regName = newInst->effAddr; //Adds a TON of overhead. I don't know why
 	//Option 2
 	//string regName = static_cast<ostringstream*>( &(ostringstream() << newInst->effAddr) )->str();
-	//cout<<regName<<endl;
 
         DPRINTF(Prodromou, "Load Instruction. Reading From: %#08s\n", regName);
         INS_STRUCT *conflictingIns = regFile[regName];
         if (conflictingIns != NULL) {
-            node->RAW.push_back(conflictingIns);
+	    pair<UINT64, INS_STRUCT*> confl(conflictingIns->ID, conflictingIns);
+            node->RAW.push_back(confl);
             conflictingIns->readCounter++;
         }
     }
@@ -424,7 +435,6 @@ void DeadInstAnalyzer<Impl>::analyzeDeadMemRef (INS_STRUCT *node, DynInstPtr new
 	long regName = newInst->effAddr; //Adds a TON of overhead. I don't know why
         //Option 2
         //regName = static_cast<ostringstream*>( &(ostringstream() << newInst->effAddr) )->str();
-	//cout<<regName<<endl;
         INS_STRUCT *conflictingIns = regFile[regName];
         if (conflictingIns != NULL) {
             node->WAW.push_back(conflictingIns);
@@ -453,6 +463,8 @@ void DeadInstAnalyzer<Impl>::analyzeDeadRegOverwrite (INS_STRUCT *node,
 	return; 
     }
 
+    DPRINTF (DeadInstAnalyzer, "Analyzing for Dead Registers. numR=%d, numW=%d\n", numR, numW);
+
     for (int i=0; i<numR; i++) {
 	//Option 0
 	long regName = RregNames[i];
@@ -461,7 +473,10 @@ void DeadInstAnalyzer<Impl>::analyzeDeadRegOverwrite (INS_STRUCT *node,
 
 	INS_STRUCT *conflictingIns = regFile[regName];
 	if (conflictingIns != NULL) {
-	    node->RAW.push_back(conflictingIns);
+	    DPRINTF (DeadInstAnalyzer, "RAW pushing back %lld, conflicts with %ld\n", conflictingIns->ID, regName);
+
+	    pair<UINT64, INS_STRUCT*> confl(conflictingIns->ID, conflictingIns);
+	    node->RAW.push_back(confl);
 	    conflictingIns->readCounter++;
 	}
     }
@@ -473,9 +488,11 @@ void DeadInstAnalyzer<Impl>::analyzeDeadRegOverwrite (INS_STRUCT *node,
 
 	INS_STRUCT *conflictingIns = regFile[regName];
 	if (conflictingIns != NULL) {
+	    DPRINTF (DeadInstAnalyzer, "WAW pushing back %lld, conflicts with %ld\n", conflictingIns->ID, regName);
 	    node->WAW.push_back(conflictingIns);
 	    conflictingIns->OWCount ++;
- 
+
+	    DPRINTF (DeadInstAnalyzer, "Checking instruction %lld\n", conflictingIns->ID); 
 	    //Marks the end of a dead code stream
 	    if (checkDeadness(conflictingIns)) {
 		assert (newInst->seqNum != conflictingIns->ID);

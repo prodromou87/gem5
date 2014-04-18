@@ -3,6 +3,7 @@
 
 #include <deque>
 #include <map>
+#include <utility>
 #include <string>
 #include "base/statistics.hh"
 #include "mem/request.hh"
@@ -26,7 +27,8 @@ class DeadInstAnalyzer {
 	
 	struct INS_STRUCT {
 	    INS_STRUCT() : ID(0), readCounter(0), OWCount(0) {};
-	    deque <INS_STRUCT*> RAW;
+	    deque <pair<UINT64, INS_STRUCT*> > RAW; // Need to store the ID as well as the INS_STRUCT node itself 
+						    // so I can check for the memory aliasing bug during execution
 	    deque <INS_STRUCT*> WAW;
 
 	    long long int ID;
