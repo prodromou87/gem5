@@ -356,11 +356,17 @@ void DeadInstAnalyzer<Impl>::checkForSilentStore (INS_STRUCT *node, DynInstPtr n
 	int reg_id = (int)(newInst->srcRegIdx(0));
 
 	//Read the register's value (need to differentiate between ints and floats
+
 	    if ( reg_id < TheISA::NumIntRegs) {
+		DPRINTF (DeadInstAnalyzer, "Readint int reg %d\n", reg_id);
 		reg_data = cpu->readArchIntReg(reg_id, newInst->threadNumber);
 	    }
-	    else { //Float
-		reg_data = cpu->readArchFloatRegInt(reg_id, newInst->threadNumber);
+	    else if (reg_id < TheISA::NumIntRegs + TheISA::NumFloatRegs) {
+		DPRINTF (DeadInstAnalyzer, "Readint float reg %d\n", reg_id);
+		reg_data = cpu->readFloatRegBits(reg_id+cpu->numPhysIntRegs);
+	    }
+	    else {
+		DPRINTF (Prodromou, "Special Register found during silent store check\n");
 	    }
 
 	//reg_data was initialized with -1234. This is a hack and in case
@@ -369,7 +375,7 @@ void DeadInstAnalyzer<Impl>::checkForSilentStore (INS_STRUCT *node, DynInstPtr n
 	assert (reg_data != -1234); //This could actually happen within a program
 
 	uint64_t reg_useful_data = reg_data & mask;
-	DPRINTF (DeadInstAnalyzer, "[sn:%lld] Functional Access returned: address:%#x size:%d mem_data:%#x useful_data:%#x reg_data:%#x reg_useful_data:%lf\n", newInst->seqNum, req->getPaddr(), size, mem_data, useful_data, reg_data, reg_useful_data);
+	DPRINTF (DeadInstAnalyzer, "[sn:%lld] Functional Access returned: address:%#x size:%d mem_data:%#x useful_data:%#x reg_data:%#x reg_useful_data:%#x\n", newInst->seqNum, req->getPaddr(), size, mem_data, useful_data, reg_data, reg_useful_data);
     //Everything we need for the check is here now.
 	
     if (useful_data == reg_useful_data) {
@@ -401,7 +407,7 @@ void DeadInstAnalyzer<Impl>::printNodeInfo (INS_STRUCT *node,
     DPRINTF(Prodromou, "Writes to: %s\n", s1.str());
     DPRINTF(Prodromou, "Reads from: %s\n", s2.str());
     DPRINTF(Prodromou, "1: %d 2: %d 3: %d 4: %d 5: %d\n", newInst->isMemRef(), newInst->isLoad(), newInst->isStore(), newInst->isStoreConditional(), newInst->doneEACalc());
-    DPRINTF(Prodromou, "Addr: %#x, Eff. Addr: %#x, Phys. addr: %#x, Machine Address:%#x\n", newInst->instAddr(), newInst->effAddr, newInst->physEffAddr, node);
+    DPRINTF(Prodromou, "Addr: %#x, Eff. Addr: %#x, Phys. addr: %#x, \n", newInst->instAddr(), newInst->effAddr, newInst->physEffAddr);
 }
 
 template<class Impl>
