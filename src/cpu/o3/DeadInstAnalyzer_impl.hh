@@ -95,6 +95,7 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
     node->address = newInst->instAddr();
     node->WRegCount = numW;
     node->isMemRef = newInst->isMemRef();
+    node->isLoad = newInst->isLoad();
 
     //if (newInst->isStore()) node->WRegCount=1; //Fake One output register for stores -- UPDATE: Why did I do that?
     //Instruction node created 
@@ -508,3 +509,27 @@ void DeadInstAnalyzer<Impl>::analyzeRegSameValueOverwrite (INS_STRUCT *node, Dyn
     }
 }
 
+
+template<class Impl>
+bool DeadInstAnalyzer<Impl>::recursiveLoadOrigin (INS_STRUCT* node) {
+    // Comes here when a store is found
+    // Recursively trace back RAWs until the origin load is found
+    // Stop recursion when load is found or when the stored 
+    // information is not enough (end of instructions listi => returns false)
+
+    if (node->isLoad) {
+	loadOrigins++;
+	return true;
+    }
+    
+    if (node == NULL) {
+	return false;
+    }
+
+    for (typename deque<INS_STRUCT*>::iterator it=(node->RAW).begin(); it != (node->RAW).end(); ++it) {
+	if (!(recursiveLoadOrigin((*it)))) {
+	    return false;
+	}
+    }
+    return true;
+}

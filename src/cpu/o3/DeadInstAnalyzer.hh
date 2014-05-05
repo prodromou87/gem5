@@ -36,6 +36,7 @@ class DeadInstAnalyzer {
 
 	    long long int address;
 	    bool isMemRef; //Set to true if the instruction is Memory Reference (Load/Store)
+	    bool isLoad;
 	};
 
 	map <long, INS_STRUCT*> regFile; // Holds the last writer instruction for each reg
@@ -89,7 +90,9 @@ class DeadInstAnalyzer {
 	int nextDeadIns;
 	
 	//Prodromou: List to hold all dead Instructions
-	long long int *deadInstructionsList;	
+	long long int *deadInstructionsList;
+
+	void recursiveLoadOrigin (INS_STRUCT *node);	
 
     public:
 	DeadInstAnalyzer(O3CPU *cpu_ptr, DerivO3CPUParams *params);
