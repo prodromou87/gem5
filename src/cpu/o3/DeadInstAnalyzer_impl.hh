@@ -575,22 +575,8 @@ bool DeadInstAnalyzer<Impl>::recursiveLoadOrigin (INS_STRUCT* node) {
     // information is not enough (end of instructions listi => returns false)
 
     if (node->isLoad) {
-
 	loadOrigins++;
 	return true;
-    }
-    
-    if (node == NULL) {
-	return false;
-    }
-
-    for (typename deque<INS_STRUCT*>::iterator it=(node->RAW).begin(); it != (node->RAW).end(); ++it) {
-	if (!(recursiveLoadOrigin((*it)))) {
-	    return false;
-	}
-=======
-        loadOrigins++;
-        return true;
     }
 
     if (node == NULL) {
@@ -604,7 +590,6 @@ bool DeadInstAnalyzer<Impl>::recursiveLoadOrigin (INS_STRUCT* node) {
         if (!(recursiveLoadOrigin((it->second)))) {
             return false;
         }
->>>>>>> 7fca775fc5e4e593abc7ab057a1caa2472043efd
     }
     return true;
 }
