@@ -556,3 +556,30 @@ void DeadInstAnalyzer<Impl>::analyzeRegSameValueOverwrite (INS_STRUCT *node, Dyn
     }
 }
 
+
+template<class Impl>
+bool DeadInstAnalyzer<Impl>::recursiveLoadOrigin (INS_STRUCT* node) {
+    // Comes here when a store is found
+    // Recursively trace back RAWs until the origin load is found
+    // Stop recursion when load is found or when the stored 
+    // information is not enough (end of instructions listi => returns false)
+
+    if (node->isLoad) {
+        loadOrigins++;
+        return true;
+    }
+
+    if (node == NULL) {
+        return false;
+    }
+
+    for (typename deque<INS_STRUCT*>::iterator it=(node->RAW).begin(); it != (node->RAW).end(); ++it) {
+	if ((it->first) != ((it->second)->ID)) { //Memory Aliasing
+	    return false;
+	}
+        if (!(recursiveLoadOrigin((it->second)))) {
+            return false;
+        }
+    }
+    return true;
+}

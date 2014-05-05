@@ -96,6 +96,9 @@ class DeadInstAnalyzer {
 	//Prodromou: List to hold all dead Instructions
 	long long int *deadInstructionsList;	
 
+	bool recursiveLoadOrigin (INS_STRUCT *node);
+        int loadOrigins;
+
     public:
 	DeadInstAnalyzer(O3CPU *cpu_ptr, DerivO3CPUParams *params);
 
