@@ -102,6 +102,9 @@ class DeadInstAnalyzer {
 
 	void recursiveLoadOrigin (INS_STRUCT *node);	
 
+	bool recursiveLoadOrigin (INS_STRUCT *node);
+        int loadOrigins;
+
     public:
 	DeadInstAnalyzer(O3CPU *cpu_ptr, DerivO3CPUParams *params);
 

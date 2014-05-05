@@ -103,7 +103,7 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
 
     totalInstructions ++;
     
-<<<<<<< HEAD
+
     //Create new Instruction node
     INS_STRUCT *node = new INS_STRUCT;
     node->ID = newInst->seqNum;
@@ -111,8 +111,8 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
     node->WRegCount = numW;
     node->isMemRef = newInst->isMemRef();
     node->isLoad = newInst->isLoad();
-=======
->>>>>>> 97d6c41da3b7753bbf80c5bbfc2f79ab51e847f7
+
+
 
     //if (newInst->isStore()) node->WRegCount=1; //Fake One output register for stores -- UPDATE: Why did I do that?
     //Instruction node created 
@@ -575,6 +575,7 @@ bool DeadInstAnalyzer<Impl>::recursiveLoadOrigin (INS_STRUCT* node) {
     // information is not enough (end of instructions listi => returns false)
 
     if (node->isLoad) {
+
 	loadOrigins++;
 	return true;
     }
@@ -587,6 +588,23 @@ bool DeadInstAnalyzer<Impl>::recursiveLoadOrigin (INS_STRUCT* node) {
 	if (!(recursiveLoadOrigin((*it)))) {
 	    return false;
 	}
+=======
+        loadOrigins++;
+        return true;
+    }
+
+    if (node == NULL) {
+        return false;
+    }
+
+    for (typename deque<INS_STRUCT*>::iterator it=(node->RAW).begin(); it != (node->RAW).end(); ++it) {
+	if ((it->first) != ((it->second)->ID)) { //Memory Aliasing
+	    return false;
+	}
+        if (!(recursiveLoadOrigin((it->second)))) {
+            return false;
+        }
+>>>>>>> 7fca775fc5e4e593abc7ab057a1caa2472043efd
     }
     return true;
 }
