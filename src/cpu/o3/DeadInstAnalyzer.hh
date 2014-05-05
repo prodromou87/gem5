@@ -3,6 +3,7 @@
 
 #include <deque>
 #include <map>
+#include <utility>
 #include <string>
 #include "base/statistics.hh"
 #include "mem/request.hh"
@@ -26,7 +27,8 @@ class DeadInstAnalyzer {
 	
 	struct INS_STRUCT {
 	    INS_STRUCT() : ID(0), readCounter(0), OWCount(0) {};
-	    deque <INS_STRUCT*> RAW;
+	    deque <pair<UINT64, INS_STRUCT*> > RAW; // Need to store the ID as well as the INS_STRUCT node itself 
+						    // so I can check for the memory aliasing bug during execution
 	    deque <INS_STRUCT*> WAW;
 
 	    long long int ID;
@@ -36,7 +38,13 @@ class DeadInstAnalyzer {
 
 	    long long int address;
 	    bool isMemRef; //Set to true if the instruction is Memory Reference (Load/Store)
+<<<<<<< HEAD
 	    bool isLoad;
+=======
+
+	    int *Wregs;
+	    UINT64 effAddr;
+>>>>>>> 97d6c41da3b7753bbf80c5bbfc2f79ab51e847f7
 	};
 
 	map <long, INS_STRUCT*> regFile; // Holds the last writer instruction for each reg

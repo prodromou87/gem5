@@ -76,19 +76,34 @@ void DeadInstAnalyzer<Impl>::deadInstMet() {
 
 template<class Impl>
 void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
-    
+
     //Get the affected registers
     int numW = newInst->numDestRegs();
     int numR = newInst->numSrcRegs();
 
+    //Create new Instruction node
+    INS_STRUCT *node = new INS_STRUCT;
+    node->ID = newInst->seqNum;
+    node->address = newInst->instAddr();
+    node->WRegCount = numW;
+    node->isMemRef = newInst->isStore();
+    node->Wregs = new int[numW];
+    if (node->isMemRef) node->effAddr = newInst->effAddr;
+    else node->effAddr = -1;
+   
+
     int *WregNames = new int[numW];
     int *RregNames = new int[numR];   
-    for (int i=0; i<numW; i++) WregNames[i] = (int)(newInst->destRegIdx(i));
+    for (int i=0; i<numW; i++) {
+	WregNames[i] = (int)(newInst->destRegIdx(i));
+	node->Wregs[i] = WregNames[i];
+    }
     for (int i=0; i<numR; i++) RregNames[i] = (int)(newInst->srcRegIdx(i));
     //Affected registers (if any) are here
 
     totalInstructions ++;
     
+<<<<<<< HEAD
     //Create new Instruction node
     INS_STRUCT *node = new INS_STRUCT;
     node->ID = newInst->seqNum;
@@ -96,6 +111,8 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
     node->WRegCount = numW;
     node->isMemRef = newInst->isMemRef();
     node->isLoad = newInst->isLoad();
+=======
+>>>>>>> 97d6c41da3b7753bbf80c5bbfc2f79ab51e847f7
 
     //if (newInst->isStore()) node->WRegCount=1; //Fake One output register for stores -- UPDATE: Why did I do that?
     //Instruction node created 
@@ -105,7 +122,7 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
     // Also update the (virtual) register file
     if (instructions.size() == STREAM_WINDOW) {
         INS_STRUCT *temp_ptr = instructions.front();
-        //clearRegFile(temp_ptr); //NOTE This adds a significant overhead. Also it's not necessary since the deadness checks verify that an instruction is still in the window before they proceed. 
+        clearRegFile(temp_ptr); //NOTE This adds a significant overhead. Also it's not necessary since the deadness checks verify that an instruction is still in the window before they proceed. 
         instructions.pop_front();
         delete(temp_ptr);
     }
@@ -119,9 +136,9 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
 /*
     NOTE: op_type defines the checks
 	op_type = 1 => Only OverReg check
-	op_type = 2 => + SilentRegs check
+	op_type = 2 => + OverStores check
 	op_type = 3 => + SilentStores check
-	op_type = 4 => + OverMem check (all checkers active)
+	op_type = 4 => + SilentRegs check (all checkers active)
 */
 
     //Check for overwrites
@@ -151,7 +168,6 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
 	fromSilentReg += (deadInstructions.value() - t);
     }
 
-    //cout<<"S: "<<regFile.size()<<endl;
 
 //Prodromou: Checks completed
 
@@ -172,8 +188,26 @@ remove any trace of that instruction
 */
 template<class Impl>
 void DeadInstAnalyzer<Impl>::clearRegFile(INS_STRUCT *instruction) {
-    long long int id = instruction->ID;
 
+    long long int id = instruction->ID;
+    
+    if (instruction->isMemRef) {
+	long regName = instruction->effAddr;
+	INS_STRUCT *temp = regFile[regName];
+	if ((temp != NULL) && (temp->ID == id)) regFile[regName] = NULL;
+    }
+    else {
+	for (int i=0; i<instruction->WRegCount; i++) {
+	    long regName = instruction->Wregs[i];
+	    INS_STRUCT *temp = regFile[regName];
+	    //temp CANNOT BE NULL -- but regFile might be pointing to other instruction
+	    if (temp->ID == id) {
+		regFile[regName] = NULL;
+	    }
+	}
+    }
+
+/*
     for (typename map<long,INS_STRUCT*>::iterator it=regFile.begin(); it!=regFile.end(); ++it) {
         if (it->second == NULL) continue;
         if (it->second->ID == id) {
@@ -183,6 +217,7 @@ void DeadInstAnalyzer<Impl>::clearRegFile(INS_STRUCT *instruction) {
 	    }
         }
     }
+*/
 }
 
 template<class Impl>
@@ -196,7 +231,7 @@ bool DeadInstAnalyzer<Impl>::checkDeadness (INS_STRUCT *instruction) {
         //Instruction is Dead
 	if (instruction->isMemRef) overStores++;
 	else overRegs++;
-	
+
 	declareDead(instruction);
         return true;
     }
@@ -213,6 +248,8 @@ template<class Impl>
 void DeadInstAnalyzer<Impl>::declareDead (INS_STRUCT *instruction) {
     DPRINTF(DeadInstAnalyzer, "Instruction Dead: %lld\n", instruction->ID);
 
+    //cout<<"D "<<instruction->ID<<endl;
+
     deadInsCounter ++;
 
     //For Simulator's statistics
@@ -224,11 +261,20 @@ void DeadInstAnalyzer<Impl>::declareDead (INS_STRUCT *instruction) {
     // FIXED: There is no need to do this IF THERE IS ONLY ONE output register. Otherwise I need to take care of it. REASON: The instruction that triggered backlog is dead, thus overwritten. Consequently all WAW instructions are still overwritten.
 
     //DECREASE THE COUNTER IN ALL RAWs
-    for (typename deque<INS_STRUCT*>::iterator it=(instruction->RAW).begin(); it != (instruction->RAW).end(); ++it) {
-        if ((*it)->ID < currentHead) continue;
+    for (typename deque<pair<UINT64, INS_STRUCT*> >::iterator it=(instruction->RAW).begin(); it != (instruction->RAW).end(); ++it) {
+	DPRINTF (DeadInstAnalyzer, "Instruction %lld: RAW element: %lld\n", instruction->ID, (it->second)->ID);
+	if ((it->first) != ((it->second)->ID)) { //Memory Aliasing Detected
+	    DPRINTF(DeadInstAnalyzer, "Memory Aliasing Detected. Skipping computation...\n");
+	    continue;
+	}
+        else if ((it->second)->ID < currentHead) {
+	    DPRINTF (DeadInstAnalyzer, "Exceeds ins. window size. Continuing...\n");
+	    continue;
+	}
         else {
-            (*it)->readCounter --;
-            checkDeadness (*it);
+            (it->second)->readCounter --;
+	    DPRINTF (DeadInstAnalyzer, "Recursively checking instruction %lld\n", (it->second)->ID);
+            checkDeadness (it->second);
         }
     }
 }
@@ -320,11 +366,17 @@ void DeadInstAnalyzer<Impl>::checkForSilentStore (INS_STRUCT *node, DynInstPtr n
 	int reg_id = (int)(newInst->srcRegIdx(0));
 
 	//Read the register's value (need to differentiate between ints and floats
+
 	    if ( reg_id < TheISA::NumIntRegs) {
+		DPRINTF (DeadInstAnalyzer, "Readint int reg %d\n", reg_id);
 		reg_data = cpu->readArchIntReg(reg_id, newInst->threadNumber);
 	    }
-	    else { //Float
-		reg_data = cpu->readArchFloatRegInt(reg_id, newInst->threadNumber);
+	    else if (reg_id < TheISA::NumIntRegs + TheISA::NumFloatRegs) {
+		DPRINTF (DeadInstAnalyzer, "Readint float reg %d\n", reg_id);
+		reg_data = cpu->readFloatRegBits(reg_id+cpu->numPhysIntRegs);
+	    }
+	    else {
+		DPRINTF (Prodromou, "Special Register found during silent store check\n");
 	    }
 
 	//reg_data was initialized with -1234. This is a hack and in case
@@ -333,7 +385,7 @@ void DeadInstAnalyzer<Impl>::checkForSilentStore (INS_STRUCT *node, DynInstPtr n
 	assert (reg_data != -1234); //This could actually happen within a program
 
 	uint64_t reg_useful_data = reg_data & mask;
-	DPRINTF (DeadInstAnalyzer, "[sn:%lld] Functional Access returned: address:%#x size:%d mem_data:%#x useful_data:%#x reg_data:%#x reg_useful_data:%lf\n", newInst->seqNum, req->getPaddr(), size, mem_data, useful_data, reg_data, reg_useful_data);
+	DPRINTF (DeadInstAnalyzer, "[sn:%lld] Functional Access returned: address:%#x size:%d mem_data:%#x useful_data:%#x reg_data:%#x reg_useful_data:%#x\n", newInst->seqNum, req->getPaddr(), size, mem_data, useful_data, reg_data, reg_useful_data);
     //Everything we need for the check is here now.
 	
     if (useful_data == reg_useful_data) {
@@ -365,18 +417,17 @@ void DeadInstAnalyzer<Impl>::printNodeInfo (INS_STRUCT *node,
     DPRINTF(Prodromou, "Writes to: %s\n", s1.str());
     DPRINTF(Prodromou, "Reads from: %s\n", s2.str());
     DPRINTF(Prodromou, "1: %d 2: %d 3: %d 4: %d 5: %d\n", newInst->isMemRef(), newInst->isLoad(), newInst->isStore(), newInst->isStoreConditional(), newInst->doneEACalc());
-    DPRINTF(Prodromou, "Addr: %#x, Eff. Addr: %#x, Phys. addr: %#x\n", newInst->instAddr(), newInst->effAddr, newInst->physEffAddr);
+    DPRINTF(Prodromou, "Addr: %#x, Eff. Addr: %#x, Phys. addr: %#x, \n", newInst->instAddr(), newInst->effAddr, newInst->physEffAddr);
 }
 
 template<class Impl>
 void DeadInstAnalyzer<Impl>::analyzeDeadMemRef (INS_STRUCT *node, DynInstPtr newInst) {
 
     //check operation type and return if checker is not activated
-    if (op_type < 4) {
+    if (op_type < 2) {
         return;
     }
 
-    string regName = "";
     // Reading Memory References => Load Instructions
     // Handling memory address as a register.
     if (newInst->isLoad()) {
@@ -384,12 +435,12 @@ void DeadInstAnalyzer<Impl>::analyzeDeadMemRef (INS_STRUCT *node, DynInstPtr new
 	long regName = newInst->effAddr; //Adds a TON of overhead. I don't know why
 	//Option 2
 	//string regName = static_cast<ostringstream*>( &(ostringstream() << newInst->effAddr) )->str();
-	//cout<<regName<<endl;
 
         DPRINTF(Prodromou, "Load Instruction. Reading From: %#08s\n", regName);
         INS_STRUCT *conflictingIns = regFile[regName];
         if (conflictingIns != NULL) {
-            node->RAW.push_back(conflictingIns);
+	    pair<UINT64, INS_STRUCT*> confl(conflictingIns->ID, conflictingIns);
+            node->RAW.push_back(confl);
             conflictingIns->readCounter++;
         }
     }
@@ -400,7 +451,6 @@ void DeadInstAnalyzer<Impl>::analyzeDeadMemRef (INS_STRUCT *node, DynInstPtr new
 	long regName = newInst->effAddr; //Adds a TON of overhead. I don't know why
         //Option 2
         //regName = static_cast<ostringstream*>( &(ostringstream() << newInst->effAddr) )->str();
-	//cout<<regName<<endl;
         INS_STRUCT *conflictingIns = regFile[regName];
         if (conflictingIns != NULL) {
             node->WAW.push_back(conflictingIns);
@@ -429,32 +479,39 @@ void DeadInstAnalyzer<Impl>::analyzeDeadRegOverwrite (INS_STRUCT *node,
 	return; 
     }
 
-    string regName = "";
+    DPRINTF (DeadInstAnalyzer, "Analyzing for Dead Registers. numR=%d, numW=%d\n", numR, numW);
+
     for (int i=0; i<numR; i++) {
 	//Option 0
-	int regName = RregNames[i];
+	long regName = RregNames[i];
         //Option 2
         //regName = static_cast<ostringstream*>( &(ostringstream() << RregNames[i]) )->str();
 
 	INS_STRUCT *conflictingIns = regFile[regName];
 	if (conflictingIns != NULL) {
-	    node->RAW.push_back(conflictingIns);
+	    DPRINTF (DeadInstAnalyzer, "RAW pushing back %lld, conflicts with %ld\n", conflictingIns->ID, regName);
+
+	    pair<UINT64, INS_STRUCT*> confl(conflictingIns->ID, conflictingIns);
+	    node->RAW.push_back(confl);
 	    conflictingIns->readCounter++;
 	}
     }
     for (int i=0; i<numW; i++) {
 	//Option 0
-        int regName = WregNames[i];
+        long regName = WregNames[i];
         //Option 2
         //regName = static_cast<ostringstream*>( &(ostringstream() << WregNames[i]) )->str();
 
 	INS_STRUCT *conflictingIns = regFile[regName];
 	if (conflictingIns != NULL) {
+	    DPRINTF (DeadInstAnalyzer, "WAW pushing back %lld, conflicts with %ld\n", conflictingIns->ID, regName);
 	    node->WAW.push_back(conflictingIns);
 	    conflictingIns->OWCount ++;
- 
+
+	    DPRINTF (DeadInstAnalyzer, "Checking instruction %lld\n", conflictingIns->ID); 
 	    //Marks the end of a dead code stream
 	    if (checkDeadness(conflictingIns)) {
+		assert (newInst->seqNum != conflictingIns->ID);
 		deadStreamCounter ++;
 	    }
 	    
@@ -467,7 +524,7 @@ template<class Impl>
 void DeadInstAnalyzer<Impl>::analyzeRegSameValueOverwrite (INS_STRUCT *node, DynInstPtr newInst, int numW){
 
      //check operation type and return if checker is not activated
-    if (op_type < 2) {
+    if (op_type < 4) {
         return;
     }
 
