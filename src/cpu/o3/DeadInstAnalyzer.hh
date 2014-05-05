@@ -35,16 +35,11 @@ class DeadInstAnalyzer {
 	    int WRegCount; //Number of output registers for each command
 	    int readCounter; // Number of times the output registers were read by other instructions
 	    int OWCount; // Note: Each output register (Wreg) can be overwritten by at most one instruction
-
 	    long long int address;
 	    bool isMemRef; //Set to true if the instruction is Memory Reference (Load/Store)
-<<<<<<< HEAD
 	    bool isLoad;
-=======
-
 	    int *Wregs;
 	    UINT64 effAddr;
->>>>>>> 97d6c41da3b7753bbf80c5bbfc2f79ab51e847f7
 	};
 
 	map <long, INS_STRUCT*> regFile; // Holds the last writer instruction for each reg
