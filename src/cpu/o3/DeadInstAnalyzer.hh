@@ -95,13 +95,13 @@ class DeadInstAnalyzer {
 	//Prodromou: List to hold all dead Instructions
 	long long int *deadInstructionsList;
 
-	void recursiveLoadOrigin (INS_STRUCT *node);	
-
-	bool recursiveLoadOrigin (INS_STRUCT *node);
+	bool recursiveLoadOrigins (INS_STRUCT *node);
         int loadOrigins;
+	map <int, int> loadOriginsMap;
 
     public:
 	DeadInstAnalyzer(O3CPU *cpu_ptr, DerivO3CPUParams *params);
+	~DeadInstAnalyzer();
 
 	//The connecting function between the Analyzer and the 
 	//commit stage. Commited instructions are sent to this 

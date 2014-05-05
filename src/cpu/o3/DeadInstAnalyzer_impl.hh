@@ -62,6 +62,13 @@ DeadInstAnalyzer<Impl>::DeadInstAnalyzer(O3CPU *cpu_ptr, DerivO3CPUParams *param
 }
 
 template<class Impl>
+DeadInstAnalyzer<Impl>::~DeadInstAnalyzer() {
+    // Print the Load Origins Map
+    for (map<int,int>::iterator it=loadOriginsMap.begin(); it!=loadOriginsMap.end(); ++it)
+	cout << it->first << " => " << it->second << '\n';
+}
+
+template<class Impl>
 long long int DeadInstAnalyzer<Impl>::nextDead() {
     //Should be ok for now
     return -1;
@@ -87,6 +94,8 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
     node->address = newInst->instAddr();
     node->WRegCount = numW;
     node->isMemRef = newInst->isStore();
+    node->isLoad = newInst->isLoad();
+    
     node->Wregs = new int[numW];
     if (node->isMemRef) node->effAddr = newInst->effAddr;
     else node->effAddr = -1;
@@ -102,18 +111,7 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
     //Affected registers (if any) are here
 
     totalInstructions ++;
-    
-
-    //Create new Instruction node
-    INS_STRUCT *node = new INS_STRUCT;
-    node->ID = newInst->seqNum;
-    node->address = newInst->instAddr();
-    node->WRegCount = numW;
-    node->isMemRef = newInst->isMemRef();
-    node->isLoad = newInst->isLoad();
-
-
-
+   
     //if (newInst->isStore()) node->WRegCount=1; //Fake One output register for stores -- UPDATE: Why did I do that?
     //Instruction node created 
 
@@ -160,6 +158,13 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
 	UINT64 t = deadInstructions.value();
         checkForSilentStore(node, newInst);
 	fromSilentStore += (deadInstructions.value() - t);
+
+	// Find the Load Origins
+	loadOrigins = 0;
+	if (recursiveLoadOrigins (node)) {
+	    loadOriginsMap[loadOrigins] ++;
+	}
+
     }
     else {
 	//SilentReg check
@@ -568,7 +573,7 @@ void DeadInstAnalyzer<Impl>::analyzeRegSameValueOverwrite (INS_STRUCT *node, Dyn
 
 
 template<class Impl>
-bool DeadInstAnalyzer<Impl>::recursiveLoadOrigin (INS_STRUCT* node) {
+bool DeadInstAnalyzer<Impl>::recursiveLoadOrigins (INS_STRUCT* node) {
     // Comes here when a store is found
     // Recursively trace back RAWs until the origin load is found
     // Stop recursion when load is found or when the stored 
@@ -583,11 +588,11 @@ bool DeadInstAnalyzer<Impl>::recursiveLoadOrigin (INS_STRUCT* node) {
         return false;
     }
 
-    for (typename deque<INS_STRUCT*>::iterator it=(node->RAW).begin(); it != (node->RAW).end(); ++it) {
+    for (typename deque<pair<UINT64, INS_STRUCT*> >::iterator it=(node->RAW).begin(); it != (node->RAW).end(); ++it) {
 	if ((it->first) != ((it->second)->ID)) { //Memory Aliasing
 	    return false;
 	}
-        if (!(recursiveLoadOrigin((it->second)))) {
+        if (!(recursiveLoadOrigins((it->second)))) {
             return false;
         }
     }
