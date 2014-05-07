@@ -97,11 +97,13 @@ class DeadInstAnalyzer {
 
 	bool recursiveLoadOrigins (INS_STRUCT *node);
         int loadOrigins;
+	UINT64 totalStores;
 	map <int, int> loadOriginsMap;
+	map <int, int> deadLoadOriginsMap;
+	void printLoadOrigins();
 
     public:
 	DeadInstAnalyzer(O3CPU *cpu_ptr, DerivO3CPUParams *params);
-	~DeadInstAnalyzer();
 
 	//The connecting function between the Analyzer and the 
 	//commit stage. Commited instructions are sent to this 
