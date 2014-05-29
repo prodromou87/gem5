@@ -579,6 +579,8 @@ bool DeadInstAnalyzer<Impl>::recursiveLoadOrigins (INS_STRUCT* node) {
     // Stop recursion when load is found or when the stored 
     // information is not enough (end of instructions listi => returns false)
 
+    long long int currentHead = (*(instructions.begin()))->ID;
+
     if (node->isLoad) {
 	loadOrigins++;
 	return true;
@@ -592,6 +594,9 @@ bool DeadInstAnalyzer<Impl>::recursiveLoadOrigins (INS_STRUCT* node) {
 	if ((it->first) != ((it->second)->ID)) { //Memory Aliasing
 	    return false;
 	}
+	else if ((it->second)->ID < currentHead) {
+            return false;
+        }
         if (!(recursiveLoadOrigins((it->second)))) {
             return false;
         }
