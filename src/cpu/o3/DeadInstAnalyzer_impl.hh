@@ -5,6 +5,7 @@
 #include "params/DerivO3CPU.hh"
 #include <fstream>
 #include "base/statistics.hh"
+#include "base/callback.hh"
 #include <cstdio>
 #include <cstdlib>
 
@@ -37,6 +38,8 @@ DeadInstAnalyzer<Impl>::DeadInstAnalyzer(O3CPU *cpu_ptr, DerivO3CPUParams *param
     fromSilentReg = 0;
     fromSilentStore = 0;
 
+    totalStores = 0;
+
     // Register this object's statistics
     regStats();
 
@@ -59,13 +62,21 @@ DeadInstAnalyzer<Impl>::DeadInstAnalyzer(O3CPU *cpu_ptr, DerivO3CPUParams *param
 */
 
     nextDeadIns = 0;
+
+    Callback* cb = new MakeCallback<DeadInstAnalyzer, &DeadInstAnalyzer::printLoadOrigins> (this);
+    registerExitCallback(cb);
 }
 
 template<class Impl>
-DeadInstAnalyzer<Impl>::~DeadInstAnalyzer() {
+void DeadInstAnalyzer<Impl>::printLoadOrigins() {
     // Print the Load Origins Map
+    cout <<"Total Stores: "<<totalStores<<endl;
     for (map<int,int>::iterator it=loadOriginsMap.begin(); it!=loadOriginsMap.end(); ++it)
 	cout << it->first << " => " << it->second << '\n';
+
+    cout <<"deadLoadOriginsMap "<<silentStores.value()<<endl;
+    for (map<int,int>::iterator it=deadLoadOriginsMap.begin(); it!=deadLoadOriginsMap.end(); ++it)
+        cout << it->first << " => " << it->second << '\n';
 }
 
 template<class Impl>
@@ -154,6 +165,8 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
 
     //Check for silence
     if (newInst->isStore()) {
+	totalStores ++;
+
 	//SilentStore check
 	UINT64 t = deadInstructions.value();
         checkForSilentStore(node, newInst);
@@ -164,7 +177,6 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
 	if (recursiveLoadOrigins (node)) {
 	    loadOriginsMap[loadOrigins] ++;
 	}
-
     }
     else {
 	//SilentReg check
@@ -397,6 +409,10 @@ void DeadInstAnalyzer<Impl>::checkForSilentStore (INS_STRUCT *node, DynInstPtr n
 	DPRINTF (DeadInstAnalyzer, "[sn:%lli] Silent store. Instruction Dead\n", newInst->seqNum);
 	silentStores++;
 	declareDead(node);
+
+        if (loadOrigins != 0) {
+            deadLoadOriginsMap[loadOrigins] ++;
+        }
     }
     
     delete[] temp;
@@ -586,8 +602,12 @@ bool DeadInstAnalyzer<Impl>::recursiveLoadOrigins (INS_STRUCT* node) {
 	return true;
     }
 
-    if (node == NULL) {
+    if (node->ID < currentHead) {
         return false;
+    }
+
+    if ((node->RAW).size() == 0) {
+	return false;
     }
 
     for (typename deque<pair<UINT64, INS_STRUCT*> >::iterator it=(node->RAW).begin(); it != (node->RAW).end(); ++it) {
