@@ -174,9 +174,19 @@ void DeadInstAnalyzer<Impl>::analyze (DynInstPtr newInst) {
 
 	// Find the Load Origins
 	loadOrigins = 0;
+	//trigger = false;
+	//if (newInst->seqNum == 8879746) {
+	//    cerr<<"CODE TRIGGERED"<<endl;
+	//    trigger = true;
+	//}
+	//if (trigger) {
+	//    cout<<"Calling with ins "<<newInst->seqNum<<": "; newInst->dump();
+	//}
+	recursiveCalls = 0;
 	if (recursiveLoadOrigins (node)) {
 	    loadOriginsMap[loadOrigins] ++;
 	}
+	//if (trigger) trigger = false;
     }
     else {
 	//SilentReg check
@@ -590,36 +600,55 @@ void DeadInstAnalyzer<Impl>::analyzeRegSameValueOverwrite (INS_STRUCT *node, Dyn
 
 template<class Impl>
 bool DeadInstAnalyzer<Impl>::recursiveLoadOrigins (INS_STRUCT* node) {
+
+    recursiveCalls++;
+    if (recursiveCalls > 256) {
+	//if (trigger) cout<<"Too many recursions. Aborting"<<endl;
+	return false;
+    }
+
     // Comes here when a store is found
     // Recursively trace back RAWs until the origin load is found
     // Stop recursion when load is found or when the stored 
     // information is not enough (end of instructions listi => returns false)
 
     long long int currentHead = (*(instructions.begin()))->ID;
+    //if (trigger) cout<<"Current Node: "<<node->ID<<"CurrentHead is "<<currentHead<<endl;
 
     if (node->isLoad) {
 	loadOrigins++;
+	//if (trigger) cout<<"Load found. Returning True"<<endl;
 	return true;
     }
 
     if (node->ID < currentHead) {
+	//if (trigger) cout<<"Exceeded window size. Returning False"<<endl;
         return false;
     }
 
     if ((node->RAW).size() == 0) {
+	//if (trigger) cout<<"No Elements in RAW List. Returning False"<<endl;
 	return false;
     }
+    
+    //if (trigger) cout<<"Inst: "<<node->ID<<": Number of Elements in RAW: "<<(node->RAW).size()<<endl;
 
     for (typename deque<pair<UINT64, INS_STRUCT*> >::iterator it=(node->RAW).begin(); it != (node->RAW).end(); ++it) {
 	if ((it->first) != ((it->second)->ID)) { //Memory Aliasing
+	    //if (trigger) cout<<"Memory Aliasing. Returning False"<<endl;
 	    return false;
 	}
-	else if ((it->second)->ID < currentHead) {
+	if ((it->second)->ID < currentHead) {
+	    //if (trigger) cout<<"Exceeded window size (2nd check). Returning False"<<endl;
             return false;
         }
+	//if (trigger) cout<<"Inst: "<<node->ID<<": Recursion on inst "<<it->second->ID<<endl;
         if (!(recursiveLoadOrigins((it->second)))) {
+	    //if (trigger) cout<<"Recursive call failed. Returning False"<<endl;
             return false;
         }
     }
+    
+    //if (trigger) cout<<"All done. Origins found."<<endl;
     return true;
 }

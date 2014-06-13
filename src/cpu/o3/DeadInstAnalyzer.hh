@@ -102,6 +102,9 @@ class DeadInstAnalyzer {
 	map <int, int> deadLoadOriginsMap;
 	void printLoadOrigins();
 
+	//bool trigger;
+	int recursiveCalls;
+
     public:
 	DeadInstAnalyzer(O3CPU *cpu_ptr, DerivO3CPUParams *params);
 
