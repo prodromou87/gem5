@@ -41,8 +41,7 @@
       The folder &quot;spek2k6_simpoints&quot; at matricks includes all the work for generating checkpoints, along with scripts that automate the procedure.
     </p>
   </body>
-</html>
-</richcontent>
+</html></richcontent>
 <edge STYLE="sharp_bezier"/>
 <node CREATED="1397177367928" ID="ID_1090816176" LINK="aprodrom@matricks.ucsd.edu:spek2k6_simpoints/" MODIFIED="1397188007999" TEXT="Simpoint Profiling">
 <edge STYLE="sharp_bezier"/>
@@ -72,8 +71,7 @@
       </tr>
     </table>
   </body>
-</html>
-</richcontent>
+</html></richcontent>
 <edge STYLE="sharp_bezier"/>
 <node CREATED="1397177623542" ID="ID_1189086345" MODIFIED="1397188007997" TEXT="Dead instruction count">
 <richcontent TYPE="NOTE"><html>
@@ -103,9 +101,49 @@
 <edge STYLE="sharp_bezier"/>
 <icon BUILTIN="go"/>
 </node>
-<node CREATED="1397242245117" ID="ID_2863529" MODIFIED="1397242253270" TEXT="Impact of individual checkers"/>
+<node CREATED="1397242245117" ID="ID_2863529" MODIFIED="1403734797631" TEXT="Impact of individual checkers">
+<richcontent TYPE="NOTE"><html>
+  <head>
+    
+  </head>
+  <body>
+    <p>
+      Experiment Folder (matricks): /home/aprodrom/experiments/DeadCodeElimination/exp_2014_15_04
+    </p>
+  </body>
+</html>
+</richcontent>
 </node>
-<node CREATED="1397177170777" ID="ID_1069340594" MODIFIED="1397249817671" TEXT="Paper">
+<node CREATED="1403734031037" ID="ID_793756532" MODIFIED="1403734041358" TEXT="Load Origins">
+<node CREATED="1403734043264" ID="ID_483473815" MODIFIED="1403734861400" TEXT="Load Origins Count">
+<richcontent TYPE="NOTE"><html>
+  <head>
+    
+  </head>
+  <body>
+    <p>
+      Experiment Folder (matricks): /home/aprodrom/experiments/DeadCodeElimination/exp_loadOrigins/exp_2014_07_05
+    </p>
+  </body>
+</html>
+</richcontent>
+</node>
+<node CREATED="1403734061617" ID="ID_247119959" MODIFIED="1403734874293" TEXT="Impact of instruction window">
+<richcontent TYPE="NOTE"><html>
+  <head>
+    
+  </head>
+  <body>
+    <p>
+      Experiment Folder (matricks): /home/aprodrom/experiments/DeadCodeElimination/exp_loadOrigins/exp_2014_19_05
+    </p>
+  </body>
+</html>
+</richcontent>
+</node>
+</node>
+</node>
+<node CREATED="1397177170777" FOLDED="true" ID="ID_1069340594" MODIFIED="1403734079113" TEXT="Paper">
 <edge STYLE="sharp_bezier"/>
 <node CREATED="1397178388801" ID="ID_1007667938" MODIFIED="1397188007997" TEXT="Title">
 <edge STYLE="sharp_bezier"/>
