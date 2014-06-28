@@ -111,8 +111,7 @@
       Experiment Folder (matricks): /home/aprodrom/experiments/DeadCodeElimination/exp_2014_15_04
     </p>
   </body>
-</html>
-</richcontent>
+</html></richcontent>
 </node>
 <node CREATED="1403734031037" ID="ID_793756532" MODIFIED="1403734041358" TEXT="Load Origins">
 <node CREATED="1403734043264" ID="ID_483473815" MODIFIED="1403734861400" TEXT="Load Origins Count">
@@ -125,8 +124,7 @@
       Experiment Folder (matricks): /home/aprodrom/experiments/DeadCodeElimination/exp_loadOrigins/exp_2014_07_05
     </p>
   </body>
-</html>
-</richcontent>
+</html></richcontent>
 </node>
 <node CREATED="1403734061617" ID="ID_247119959" MODIFIED="1403734874293" TEXT="Impact of instruction window">
 <richcontent TYPE="NOTE"><html>
@@ -138,8 +136,24 @@
       Experiment Folder (matricks): /home/aprodrom/experiments/DeadCodeElimination/exp_loadOrigins/exp_2014_19_05
     </p>
   </body>
+</html></richcontent>
+</node>
+<node CREATED="1403923764838" ID="ID_728913592" MODIFIED="1403924039464" TEXT="exp_L_O_effect">
+<richcontent TYPE="NOTE"><html>
+  <head>
+    
+  </head>
+  <body>
+    <p>
+      Counting the number of dead instructions with re-defined silence checks and comparing with the &quot;oracle&quot; silence&#160;&#160;knowledge
+    </p>
+  </body>
 </html>
 </richcontent>
+<node CREATED="1403923779294" ID="ID_1979569309" MODIFIED="1403923805572" TEXT="exp_L_O_1"/>
+<node CREATED="1403923809056" ID="ID_495502965" MODIFIED="1403923816081" TEXT="exp_L_O_2"/>
+<node CREATED="1403923817048" ID="ID_543005042" MODIFIED="1403923820040" TEXT="exp_L_O_3"/>
+<node CREATED="1403923820360" ID="ID_1859130123" MODIFIED="1403923823788" TEXT="exp_L_O_4"/>
 </node>
 </node>
 </node>
