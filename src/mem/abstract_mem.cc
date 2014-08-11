@@ -57,8 +57,9 @@ AbstractMemory::AbstractMemory(const Params *p) :
     confTableReported(p->conf_table_reported), inAddrMap(p->in_addr_map),
     _system(NULL)
 {
-    if (size() % TheISA::PageBytes != 0)
+    if (size() % TheISA::PageBytes != 0) {
         panic("Memory Size not divisible by page size\n");
+    }
 }
 
 void

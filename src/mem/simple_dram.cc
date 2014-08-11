@@ -88,6 +88,8 @@ SimpleDRAM::SimpleDRAM(const SimpleDRAMParams* p) :
     // round the write threshold percent to a whole number of entries
     // in the buffer
     writeThreshold = writeBufferSize * writeThresholdPerc / 100.0;
+
+    cout << "Prodromou: SimpleDRAM Controller Instantiated: "<<name()<<endl;
 }
 
 void
@@ -286,6 +288,9 @@ SimpleDRAM::decodeAddr(PacketPtr pkt, Addr dramPktAddr, unsigned size)
 void
 SimpleDRAM::addToReadQueue(PacketPtr pkt, unsigned int pktCount)
 {
+
+    cout<<"Prodromou: Adding to read queue: "<<name()<<endl;
+
     // only add to the read queue here. whenever the request is
     // eventually done, set the readyTime, and call schedule()
     assert(!pkt->isWrite());
@@ -380,6 +385,7 @@ SimpleDRAM::addToReadQueue(PacketPtr pkt, unsigned int pktCount)
 void
 SimpleDRAM::processWriteEvent()
 {
+    cout<<"Prodromou: Processing Write Event: "<<name()<<endl;
     assert(!writeQueue.empty());
     uint32_t numWritesThisTime = 0;
 
@@ -506,6 +512,9 @@ SimpleDRAM::triggerWrites()
 void
 SimpleDRAM::addToWriteQueue(PacketPtr pkt, unsigned int pktCount)
 {
+
+    cout<<"Prodromou: Adding to write queue: "<<name()<<endl;
+
     // only add to the write queue here. whenever the request is
     // eventually done, set the readyTime, and call schedule()
     assert(pkt->isWrite());
@@ -1179,6 +1188,7 @@ SimpleDRAM::moveToRespQ()
 void
 SimpleDRAM::scheduleNextReq()
 {
+    cout<<"Prodromou: Scheduling next request: "<<name()<<endl;
     DPRINTF(DRAM, "Reached scheduleNextReq()\n");
 
     // Figure out which read request goes next, and move it to the

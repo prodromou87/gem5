@@ -54,6 +54,11 @@
 #include "debug/Drain.hh"
 #include "mem/bus.hh"
 
+//Prodromou
+#include <iostream>
+using namespace std;
+//Prodromou
+
 BaseBus::BaseBus(const BaseBusParams *p)
     : MemObject(p),
       headerCycles(p->header_cycles), width(p->width),
@@ -323,13 +328,16 @@ BaseBus::findPort(Addr addr)
 
     // Check the cache
     PortID dest_id = checkPortCache(addr);
-    if (dest_id != InvalidPortID)
+    if (dest_id != InvalidPortID) {
+	cout<<"Prodromou: checkPortCache succeeded: "<<name()<<endl;
         return dest_id;
+    }
 
     // Check the address map interval tree
     PortMapConstIter i = portMap.find(addr);
     if (i != portMap.end()) {
         dest_id = i->second;
+	cout<<"Prodromou: interval tree succeeded: "<<name()<<" "<<dest_id<<endl;
         updatePortCache(dest_id, i->first);
         return dest_id;
     }

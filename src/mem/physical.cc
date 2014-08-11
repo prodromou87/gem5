@@ -64,6 +64,9 @@ PhysicalMemory::PhysicalMemory(const string& _name,
 {
     // add the memories from the system to the address map as
     // appropriate
+
+    cout <<"Physical Memory constructor: Size: "<<_memories.size()<<endl;
+
     for (vector<AbstractMemory*>::const_iterator m = _memories.begin();
          m != _memories.end(); ++m) {
         // only add the memory if it is part of the global address map

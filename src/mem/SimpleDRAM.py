@@ -333,3 +333,50 @@ class LPDDR3_1600_x32(SimpleDRAM):
     # Irrespective of size, tFAW is 50 ns
     tXAW = '50ns'
     activation_limit = 4
+
+class OnChip_WideIO_200_x128(SimpleDRAM):
+
+    cpu_side = SlavePort("Port on side closer to CPU")
+    mem_side = MasterPort("Port on side closer to MEM")
+
+    # 1x128 configuration, 1 device with a 128-bit interface
+    device_bus_width = 128
+
+    # This is a BL4 device
+    burst_length = 4
+
+    # Each device has a page (row buffer) size of 4KB
+    # (this depends on the memory density)
+    device_rowbuffer_size = '4kB'
+
+    # 1x128 configuration, so 1 device
+    devices_per_rank = 1
+
+    # Use one rank for a one-high die stack
+    ranks_per_channel = 1
+
+    # WideIO has 4 banks in all configurations
+    banks_per_rank = 4
+
+    # WIO-200
+    tRCD = '18ns'
+    tCL = '18ns'
+    tRP = '18ns'
+
+    # 4 beats across an x128 SDR interface translates to 4 clocks @ 200 MHz.
+    # Note this is a BL4 SDR device.
+    tBURST = '20ns'
+
+    # WIO 8 Gb
+    tRFC = '210ns'
+
+    # WIO 8 Gb, <=85C, half for >85C
+    tREFI = '3.9us'
+
+    # Greater of 2 CK or 15 ns, 2 CK @ 200 MHz = 10 ns
+    tWTR = '15ns'
+
+    # Two instead of four activation window
+    tXAW = '50ns'
+    activation_limit = 2
+
