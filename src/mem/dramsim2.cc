@@ -229,7 +229,7 @@ DRAMSim2::recvTimingReq(PacketPtr pkt)
 	
 	//Prodromou: pkt->req->contextId() gives the cpu id that initiates the request (int)
 	//cout<<"Prodromou: Enqueueing packet from MasterID: "<<pkt->req->contextId()<<", "<<system()->getMasterName(pkt->req->masterId())<<endl;
-        wrapper.enqueue(pkt->isWrite(), pkt->getAddr());
+        wrapper.enqueue(pkt->isWrite(), pkt->getAddr(), pkt->req->contextId());
 
         return true;
     } else {

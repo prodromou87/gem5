@@ -166,10 +166,12 @@ DRAMSim2Wrapper::canAccept() const
     return dramsim->willAcceptTransaction();
 }
 
+//Prodromou: Adding the source cpu id field
 void
-DRAMSim2Wrapper::enqueue(bool is_write, uint64_t addr)
+DRAMSim2Wrapper::enqueue(bool is_write, uint64_t addr, int cpu_id)
 {
-    bool success M5_VAR_USED = dramsim->addTransaction(is_write, addr);
+    //Prodromou: Send the requesting core id along with the request
+    bool success M5_VAR_USED = dramsim->addTransaction(is_write, addr, cpu_id);
     assert(success);
 }
 

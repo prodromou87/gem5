@@ -59,7 +59,11 @@ namespace DRAMSim
 	virtual ~MemorySystem();
 	void update();
 	bool addTransaction(Transaction *trans);
-	bool addTransaction(bool isWrite, uint64_t addr);
+
+	//ProdromouL Add the core id field
+	bool addTransaction(bool isWrite, uint64_t addr, int cpu_id);
+	//Prodromou
+
 	void printStats(bool finalStats);
 	bool WillAcceptTransaction();
 	void RegisterCallbacks(

@@ -130,7 +130,8 @@ class DRAMSim2Wrapper
      *
      * @param pkt Packet to turn into a DRAMSim2 transaction
      */
-    void enqueue(bool is_write, uint64_t addr);
+    //Prodromou: Adding the source cpu id field
+    void enqueue(bool is_write, uint64_t addr, int cpu_id);
 
     /**
      * Get the internal clock period used by DRAMSim2, specified in

@@ -39,6 +39,10 @@
 #include "MemorySystem.h"
 #include "AddressMapping.h"
 
+//Prodromou
+#include <cassert>
+//Prodromou
+
 #define SEQUENTIAL(rank,bank) (rank*NUM_BANKS)+bank
 
 /* Power computations are localized to MemoryController.cpp */ 
@@ -767,6 +771,10 @@ bool MemoryController::WillAcceptTransaction()
 //allows outside source to make request of memory system
 bool MemoryController::addTransaction(Transaction *trans)
 {
+	//Prodromou: In case this ever happens I need to know
+	assert(trans->sourceId != -1 && "Prodromou: This shouldn't happen");
+	//Prodromou
+
 	if (WillAcceptTransaction())
 	{
 		trans->timeAdded = currentClockCycle;
