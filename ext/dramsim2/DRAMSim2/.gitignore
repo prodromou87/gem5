@@ -1,7 +1,0 @@
-results/
-*.o
-*.po
-*.dep
-*.swp
-DRAMSim
-libdramsim.so
