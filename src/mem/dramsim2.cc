@@ -43,6 +43,10 @@
 #include "debug/Drain.hh"
 #include "mem/dramsim2.hh"
 #include "sim/system.hh"
+
+#include <iostream>
+using namespace std;
+
 DRAMSim2::DRAMSim2(const Params* p) :
     AbstractMemory(p),
     port(name() + ".port", *this),
@@ -222,6 +226,9 @@ DRAMSim2::recvTimingReq(PacketPtr pkt)
         // @todo what about the granularity here, implicit assumption that
         // a transaction matches the burst size of the memory (which we
         // cannot determine without parsing the ini file ourselves)
+	
+	//Prodromou: pkt->req->contextId() gives the cpu id that initiates the request (int)
+	//cout<<"Prodromou: Enqueueing packet from MasterID: "<<pkt->req->contextId()<<", "<<system()->getMasterName(pkt->req->masterId())<<endl;
         wrapper.enqueue(pkt->isWrite(), pkt->getAddr());
 
         return true;

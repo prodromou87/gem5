@@ -50,6 +50,9 @@ MultiChannelMemorySystem::MultiChannelMemorySystem(const string &deviceIniFilena
 	clockDomainCrosser(new ClockDomain::Callback<MultiChannelMemorySystem, void>(this, &MultiChannelMemorySystem::actual_update)),
 	csvOut(new CSVWriter(visDataOut))
 {
+
+	cout << "Prodromou: Creating multi-channel with "<<NUM_CHANS<<endl;
+
 	currentClockCycle=0; 
 	if (visFilename)
 		printf("CC VISFILENAME=%s\n",visFilename->c_str());

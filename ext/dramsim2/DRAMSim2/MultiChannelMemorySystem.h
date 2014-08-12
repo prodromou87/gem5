@@ -44,19 +44,19 @@ class MultiChannelMemorySystem : public SimulatorObject
 	public: 
 
 	MultiChannelMemorySystem(const string &dev, const string &sys, const string &pwd, const string &trc, unsigned megsOfMemory, string *visFilename=NULL, const IniReader::OverrideMap *paramOverrides=NULL);
-		virtual ~MultiChannelMemorySystem();
-			bool addTransaction(Transaction *trans);
-			bool addTransaction(const Transaction &trans);
-			bool addTransaction(bool isWrite, uint64_t addr);
-			bool willAcceptTransaction(); 
-			bool willAcceptTransaction(uint64_t addr); 
-			void update();
-			void printStats(bool finalStats=false);
-			ostream &getLogFile();
-			void RegisterCallbacks( 
-				TransactionCompleteCB *readDone,
-				TransactionCompleteCB *writeDone,
-				void (*reportPower)(double bgpower, double burstpower, double refreshpower, double actprepower));
+	virtual ~MultiChannelMemorySystem();
+	bool addTransaction(Transaction *trans);
+	bool addTransaction(const Transaction &trans);
+	bool addTransaction(bool isWrite, uint64_t addr);
+	bool willAcceptTransaction(); 
+	bool willAcceptTransaction(uint64_t addr); 
+	void update();
+	void printStats(bool finalStats=false);
+	ostream &getLogFile();
+	void RegisterCallbacks( 
+		TransactionCompleteCB *readDone,
+		TransactionCompleteCB *writeDone,
+		void (*reportPower)(double bgpower, double burstpower, double refreshpower, double actprepower));
 
 	void InitOutputFiles(string tracefilename);
 	void setCPUClockSpeed(uint64_t cpuClkFreqHz);

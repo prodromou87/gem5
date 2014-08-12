@@ -51,11 +51,11 @@ using namespace std;
 
 namespace DRAMSim
 {
-class MemorySystem;
-class MemoryController : public SimulatorObject
-{
+    class MemorySystem;
+    class MemoryController : public SimulatorObject
+    {
 
-public:
+    public:
 	//functions
 	MemoryController(MemorySystem* ms, CSVWriter &csvOut_, ostream &dramsim_log_);
 	virtual ~MemoryController();
@@ -72,7 +72,8 @@ public:
 
 	//fields
 	vector<Transaction *> transactionQueue;
-private:
+
+    private:
 	ostream &dramsim_log;
 	vector< vector <BankState> > bankStates;
 	//functions
@@ -123,14 +124,14 @@ private:
 
 	unsigned refreshRank;
 	
-public:
+    public:
 	// energy values are per rank -- SST uses these directly, so make these public 
 	vector< uint64_t > backgroundEnergy;
 	vector< uint64_t > burstEnergy;
 	vector< uint64_t > actpreEnergy;
 	vector< uint64_t > refreshEnergy;
 
-};
+    };
 }
 
 #endif

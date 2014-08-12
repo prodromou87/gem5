@@ -42,17 +42,17 @@ using std::ostream;
 
 namespace DRAMSim
 {
-enum TransactionType
-{
-	DATA_READ,
-	DATA_WRITE,
-	RETURN_DATA
-};
+    enum TransactionType
+    {
+	    DATA_READ,
+	    DATA_WRITE,
+	    RETURN_DATA
+    };
 
-class Transaction
-{
+    class Transaction
+    {
 	Transaction();
-public:
+    public:
 	//fields
 	TransactionType transactionType;
 	uint64_t address;
@@ -105,7 +105,7 @@ public:
 			abort();
 		}
 	}
-};
+    };
 
 }
 

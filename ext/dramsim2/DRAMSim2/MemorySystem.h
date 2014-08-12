@@ -49,11 +49,11 @@
 
 namespace DRAMSim
 {
-typedef CallbackBase<void,unsigned,uint64_t,uint64_t> Callback_t;
-class MemorySystem : public SimulatorObject
-{
+    typedef CallbackBase<void,unsigned,uint64_t,uint64_t> Callback_t;
+    class MemorySystem : public SimulatorObject
+    {
 	ostream &dramsim_log;
-public:
+    public:
 	//functions
 	MemorySystem(unsigned id, unsigned megsOfMemory, CSVWriter &csvOut_, ostream &dramsim_log_);
 	virtual ~MemorySystem();
@@ -80,9 +80,9 @@ public:
 	static powerCallBack_t ReportPower;
 	unsigned systemID;
 
-private:
+    private:
 	CSVWriter &csvOut;
-};
+    };
 }
 
 #endif
