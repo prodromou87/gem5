@@ -234,7 +234,7 @@ if args:
     sys.exit(1)
 
 multiprocesses = []
-numThreads = 1
+numThreads = 1 
 
 if options.bench:
     apps = options.bench.split("-")
