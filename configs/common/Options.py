@@ -98,7 +98,14 @@ def addCommonOptions(parser):
     parser.add_option("--caches", action="store_true")
     parser.add_option("--l2cache", action="store_true")
     #PRODROMOU
-    parser.add_option("--l3cache", action="store_true")
+    parser.add_option("--l3cache",
+                      action = "store_true",
+                      help = "Enable L3 cache (Implies L2)")
+    parser.add_option("-b", "--benchmark", default="",
+                 help="The benchmark to be loaded.")
+    parser.add_option("--bench-size", default="ref",
+                 help="The size of the benchmark <train/ref>")
+
     #PRODROMOU
     parser.add_option("--fastmem", action="store_true")
     parser.add_option("--num-dirs", type="int", default=1)
