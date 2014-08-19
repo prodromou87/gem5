@@ -183,6 +183,66 @@ def get_processes(options):
                 process = SPEC2k6_ref.calculix
             elif options.benchmark == 'wrf':
                 process = SPEC2k6_ref.wrf
+	    elif options.benchmark == 'perlbench_x86':
+                process = SPEC2k6_ref.perlbench
+            elif options.benchmark == 'bzip2_x86':
+                process = SPEC2k6_ref.bzip2
+            elif options.benchmark == 'gcc_x86':
+                process = SPEC2k6_ref.gcc
+            elif options.benchmark == 'mcf_x86':
+                process = SPEC2k6_ref.mcf
+            elif options.benchmark == 'milc_x86':
+                process = SPEC2k6_ref.milc
+            elif options.benchmark == 'gobmk_x86':
+                process = SPEC2k6_ref.gobmk
+            elif options.benchmark == 'hmmer_x86':
+                process = SPEC2k6_ref.hmmer
+            elif options.benchmark == 'sjeng_x86':
+                process = SPEC2k6_ref.sjeng
+            elif options.benchmark == 'libquantum_x86':
+                process = SPEC2k6_ref.libquantum
+            elif options.benchmark == 'h264ref_x86':
+                process = SPEC2k6_ref.h264ref
+            elif options.benchmark == 'lbm_x86':
+                process = SPEC2k6_ref.lbm
+            elif options.benchmark == 'sphinx3_x86':
+                process = SPEC2k6_ref.sphinx3
+            elif options.benchmark == 'specrand_x86':
+                process = SPEC2k6_ref.specrand
+            elif options.benchmark == 'bwaves_x86':
+                process = SPEC2k6_ref.bwaves
+            elif options.benchmark == 'gamess_x86':
+                process = SPEC2k6_ref.gamess
+            elif options.benchmark == 'zeusmp_x86':
+                process = SPEC2k6_ref.zeusmp
+            elif options.benchmark == 'leslie3d_x86':
+                process = SPEC2k6_ref.leslie3d
+            elif options.benchmark == 'GemsFDTD_x86':
+                process = SPEC2k6_ref.GemsFDTD
+            elif options.benchmark == 'tonto_x86':
+                process = SPEC2k6_ref.tonto
+            elif options.benchmark == 'namd_x86':
+                process = SPEC2k6_ref.namd
+            elif options.benchmark == 'dealII_x86':
+                process = SPEC2k6_ref.dealII
+            elif options.benchmark == 'soplex_x86':
+                process = SPEC2k6_ref.soplex
+            elif options.benchmark == 'povray_x86':
+                process = SPEC2k6_ref.povray
+            elif options.benchmark == 'omnetpp_x86':
+                process = SPEC2k6_ref.omnetpp
+            elif options.benchmark == 'astar_x86':
+                process = SPEC2k6_ref.astar
+            elif options.benchmark == 'xalancbmk_x86':
+                process = SPEC2k6_ref.xalancbmk
+            elif options.benchmark == 'gromacs_x86':
+                process = SPEC2k6_ref.gromacs
+            elif options.benchmark == 'cactusADM_x86':
+                process = SPEC2k6_ref.cactusADM
+            elif options.benchmark == 'calculix_x86':
+                process = SPEC2k6_ref.calculix
+            elif options.benchmark == 'wrf_x86':
+                process = SPEC2k6_ref.wrf
             else:
                  print "Error: Unknown Benchmark"
                  sys.exit(1)
