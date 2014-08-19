@@ -101,7 +101,8 @@ class DRAMSim2Wrapper
                     const std::string& working_dir,
                     const std::string& trace_file,
                     unsigned int memory_size_mb,
-                    bool enable_debug);
+                    bool enable_debug,
+                    const std::string& policy);
     ~DRAMSim2Wrapper();
 
     /**

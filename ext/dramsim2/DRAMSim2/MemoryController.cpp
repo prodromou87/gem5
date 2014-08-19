@@ -64,7 +64,7 @@ extern float Vdd;
 
 using namespace DRAMSim;
 
-MemoryController::MemoryController(MemorySystem *parent, CSVWriter &csvOut_, ostream &dramsim_log_) :
+MemoryController::MemoryController(MemorySystem *parent, CSVWriter &csvOut_, ostream &dramsim_log_, const string& _policy) :
 		dramsim_log(dramsim_log_),
 		bankStates(NUM_RANKS, vector<BankState>(NUM_BANKS, dramsim_log)),
 		commandQueue(bankStates, dramsim_log_),
@@ -112,6 +112,9 @@ MemoryController::MemoryController(MemorySystem *parent, CSVWriter &csvOut_, ost
 	{
 		refreshCountdown.push_back((int)((REFRESH_PERIOD/tCK)/NUM_RANKS)*(i+1));
 	}
+
+	//Prodromou:
+	policy = _policy;
 }
 
 //get a bus packet from either data or cmd bus
@@ -493,12 +496,218 @@ void MemoryController::update()
 
 	}
 
-	for (size_t i=0;i<transactionQueue.size();i++)
-	{
+
+	//Prodromou: If the previous batch is serviced, create a new one with the currently pending requests
+	if (policy == "par-bs"){
+	    if (transactionQueue.size() != 0) {
+		if (!transactionQueue[0]->isBatched()){
+		    int numOfThreads = 8; //HACK: Fix this
+		    int totalBanks = NUM_RANKS * NUM_BANKS;
+		    
+		    //Bookeeping arrays
+		    int totalBatchedRequests[numOfThreads];
+		    int maxPerBank[numOfThreads];
+		    int perBankRequests[numOfThreads][totalBanks];
+
+		    //Initialize Bookeeping arrays
+		    for (int i=0; i<numOfThreads; i++) {
+			totalBatchedRequests[i] = 0;
+			maxPerBank[i]=0;
+			for (int j=0; j<totalBanks; j++) perBankRequests[i][j] = 0;
+		    }
+
+		    unsigned newTransactionChan, newTransactionRank, newTransactionBank, newTransactionRow, newTransactionColumn;
+
+		    vector<Transaction*> rearranged;
+		    rearranged.reserve(TRANS_QUEUE_DEPTH);
+	    
+		    // Create the batch and collect info for thread ranking
+		    for (int i=0; i<transactionQueue.size(); i++) {
+			transactionQueue[i]->addToBatch();
+
+			addressMapping(transactionQueue[i]->address, newTransactionChan, newTransactionRank, newTransactionBank, newTransactionRow, newTransactionColumn);
+			int bankId = newTransactionRank * NUM_RANKS +
+				     newTransactionBank;
+
+			int threadId = transactionQueue[i]->sourceId;
+			//assert(threadId != -1 && "Prodromou: This shouldn't happen");
+			if (threadId == -1) {
+			    rearranged.push_back(transactionQueue[i]);
+			    continue;
+			}
+
+			totalBatchedRequests[threadId]++;
+			perBankRequests[threadId][bankId]++;
+			if (perBankRequests[threadId][bankId] > maxPerBank[threadId]) {
+			    maxPerBank[threadId] = perBankRequests[threadId][bankId];
+			}
+			 
+		    }
+		    // Batch Created and info collected
+
+		    // Create thread ranking and re-arrange transactionQueue accordingly
+
+		    while (true) { // Repeat until no minimum can be found
+			int min = 1000000;
+			int minId = -1;
+			for (int i=0; i<numOfThreads; i++) {
+
+			    // Ignore zeros
+			    if (maxPerBank[i] == 0) continue;
+			    if (maxPerBank[i] < min) {
+				min = maxPerBank[i];
+				minId = i;
+			    }
+			    else if (maxPerBank[i] == min) { //Need the tie breaker
+				if (totalBatchedRequests[i] < totalBatchedRequests[minId]) {
+				    minId = i; // No need to change min since they are equal
+				}
+			    }
+			}
+		    
+			if (minId != -1) { // Found min
+			    vector <Transaction*> temp;
+			    temp.clear();
+			    for (int i=0; i<transactionQueue.size(); i++) {
+				if (transactionQueue[i]->sourceId == minId) {
+				    temp.push_back(transactionQueue[i]);
+				}
+			    }
+			    maxPerBank[minId] = 0;
+
+			    //sort temp based on time stamp
+			    //add temp in rearranged
+			    //transactionSorting(temp.begin(), temp.end(), transactionSorting);	
+			    //rearranged.insert (rearranged.end(), temp.begin(), temp.end() );
+			    while(true) {
+				if (temp.size() == 0) break;
+				int minIndex = -1;
+				int min_temp = 1000000;
+				for (int i=0; i<temp.size(); i++) {
+				    if (temp[i]->timeAdded < min_temp) {
+					min_temp = temp[i]->timeAdded;
+					minIndex = i;
+				    }
+				}
+				rearranged.push_back(temp[minIndex]);
+				temp.erase(temp.begin() + minIndex);
+			    }
+
+			}
+			else { //No minimum found
+			    break;
+			}
+		    }
+		    assert(rearranged.size() == transactionQueue.size() && "Rearranged array size mismatch");
+
+		    // rearranged vector holds all the rtansactions sorted. Need to replace it with transactionQueue
+		    transactionQueue.clear();
+		    transactionQueue = rearranged;
+		}
+
+		// Do the actual scheduling for par-bs
+		// Find the next transaction among the batched transactions. 
+		// Search for row hits otherwise return the first element
+		
+		bool rowHitFound = false;
+		int rowHitIndex = -1;
+		for (size_t i=0;i<transactionQueue.size();i++) {
+		    if (!transactionQueue[i]->isBatched()) break; // Prioritize batch
+		    
+		    //find row buffer hit
+		    unsigned newTransactionChan, newTransactionRank, newTransactionBank, newTransactionRow, newTransactionColumn;
+		    addressMapping(transactionQueue[i]->address, newTransactionChan, newTransactionRank, newTransactionBank, newTransactionRow, newTransactionColumn);
+		    if (bankStates[newTransactionRank][newTransactionBank].openRowAddress == newTransactionRow) { //Found Row hit. Prioritize
+			rowHitFound = true;
+			rowHitIndex = i;
+			break;
+		    }
+		}
+		
+		Transaction *transaction = transactionQueue[0]; // Default behavior: Get the first element (pre-sorted according to ranks)
+		if (rowHitFound) transaction = transactionQueue[rowHitIndex]; // We want to prioritize row hits
+
+		// Prodromou: ONLY ONE TRANSACTION CAN BE SCHEDULED PER CYCLE (Same as default behavior even though they have a loop). 
+		// There is a break at the end of the default code that ensures that.
+
+		unsigned newTransactionChan, newTransactionRank, newTransactionBank, newTransactionRow, newTransactionColumn;
+		addressMapping(transaction->address, newTransactionChan, newTransactionRank, newTransactionBank, newTransactionRow, newTransactionColumn);
+
+		//if we have room, break up the transaction into the appropriate commands
+		//and add them to the command queue
+		if (commandQueue.hasRoomFor(2, newTransactionRank, newTransactionBank))
+		{
+		    if (DEBUG_ADDR_MAP)
+		    {
+			PRINTN("== New Transaction - Mapping Address [0x" << hex << transaction->address << dec << "]");
+			if (transaction->transactionType == DATA_READ)
+			{
+				PRINT(" (Read)");
+			}
+			else
+			{
+				PRINT(" (Write)");
+			}
+			PRINT("  Rank : " << newTransactionRank);
+			PRINT("  Bank : " << newTransactionBank);
+			PRINT("  Row  : " << newTransactionRow);
+			PRINT("  Col  : " << newTransactionColumn);
+		    }
+		    
+		    //now that we know there is room in the command queue, we can remove from the transaction queue
+		    if (rowHitFound) {
+			
+			transactionQueue.erase(transactionQueue.begin() + rowHitIndex);
+		    }
+		    else {
+			transactionQueue.erase(transactionQueue.begin());
+		    }
+
+		    //create activate command to the row we just translated
+		    BusPacket *ACTcommand = new BusPacket(ACTIVATE, transaction->address,
+				    newTransactionColumn, newTransactionRow, newTransactionRank,
+				    newTransactionBank, 0, dramsim_log);
+
+		    //create read or write command and enqueue it
+		    BusPacketType bpType = transaction->getBusPacketType();
+		    BusPacket *command = new BusPacket(bpType, transaction->address,
+				    newTransactionColumn, newTransactionRow, newTransactionRank,
+				    newTransactionBank, transaction->data, dramsim_log);
+
+
+
+		    commandQueue.enqueue(ACTcommand);
+		    commandQueue.enqueue(command);
+
+		    // If we have a read, save the transaction so when the data comes back
+		    // in a bus packet, we can staple it back into a transaction and return it
+		    if (transaction->transactionType == DATA_READ)
+		    {
+			pendingReadTransactions.push_back(transaction);
+		    }
+		    else
+		    {
+			// just delete the transaction now that it's a buspacket
+			delete transaction;
+		    }
+		}
+		else // no room, do nothing this cycle
+		{
+			//PRINT( "== Warning - No room in command queue" << endl;
+		}
+	    }
+	}
+	else { //Not par-bs. Do default (simple) scheduling
+	    cout<<"No such policy: "<<policy<<endl;
+	    exit(-1);
+	    for (size_t i=0;i<transactionQueue.size();i++)
+	    {
 		//pop off top transaction from queue
 		//
 		//	assuming simple scheduling at the moment
 		//	will eventually add policies here
+
+		//Prodromou: Default (Simple) policy
 		Transaction *transaction = transactionQueue[i];
 
 		//map address to rank,bank,row,col
@@ -511,66 +720,67 @@ void MemoryController::update()
 		//and add them to the command queue
 		if (commandQueue.hasRoomFor(2, newTransactionRank, newTransactionBank))
 		{
-			if (DEBUG_ADDR_MAP) 
+		    if (DEBUG_ADDR_MAP) 
+		    {
+			PRINTN("== New Transaction - Mapping Address [0x" << hex << transaction->address << dec << "]");
+			if (transaction->transactionType == DATA_READ) 
 			{
-				PRINTN("== New Transaction - Mapping Address [0x" << hex << transaction->address << dec << "]");
-				if (transaction->transactionType == DATA_READ) 
-				{
-					PRINT(" (Read)");
-				}
-				else
-				{
-					PRINT(" (Write)");
-				}
-				PRINT("  Rank : " << newTransactionRank);
-				PRINT("  Bank : " << newTransactionBank);
-				PRINT("  Row  : " << newTransactionRow);
-				PRINT("  Col  : " << newTransactionColumn);
-			}
-
-
-
-			//now that we know there is room in the command queue, we can remove from the transaction queue
-			transactionQueue.erase(transactionQueue.begin()+i);
-
-			//create activate command to the row we just translated
-			BusPacket *ACTcommand = new BusPacket(ACTIVATE, transaction->address,
-					newTransactionColumn, newTransactionRow, newTransactionRank,
-					newTransactionBank, 0, dramsim_log);
-
-			//create read or write command and enqueue it
-			BusPacketType bpType = transaction->getBusPacketType();
-			BusPacket *command = new BusPacket(bpType, transaction->address,
-					newTransactionColumn, newTransactionRow, newTransactionRank,
-					newTransactionBank, transaction->data, dramsim_log);
-
-
-
-			commandQueue.enqueue(ACTcommand);
-			commandQueue.enqueue(command);
-
-			// If we have a read, save the transaction so when the data comes back
-			// in a bus packet, we can staple it back into a transaction and return it
-			if (transaction->transactionType == DATA_READ)
-			{
-				pendingReadTransactions.push_back(transaction);
+				PRINT(" (Read)");
 			}
 			else
 			{
-				// just delete the transaction now that it's a buspacket
-				delete transaction; 
+				PRINT(" (Write)");
 			}
-			/* only allow one transaction to be scheduled per cycle -- this should
-			 * be a reasonable assumption considering how much logic would be
-			 * required to schedule multiple entries per cycle (parallel data
-			 * lines, switching logic, decision logic)
-			 */
-			break;
+			PRINT("  Rank : " << newTransactionRank);
+			PRINT("  Bank : " << newTransactionBank);
+			PRINT("  Row  : " << newTransactionRow);
+			PRINT("  Col  : " << newTransactionColumn);
+		    }
+
+
+
+		    //now that we know there is room in the command queue, we can remove from the transaction queue
+		    transactionQueue.erase(transactionQueue.begin()+i);
+
+		    //create activate command to the row we just translated
+		    BusPacket *ACTcommand = new BusPacket(ACTIVATE, transaction->address,
+				    newTransactionColumn, newTransactionRow, newTransactionRank,
+				    newTransactionBank, 0, dramsim_log);
+
+		    //create read or write command and enqueue it
+		    BusPacketType bpType = transaction->getBusPacketType();
+		    BusPacket *command = new BusPacket(bpType, transaction->address,
+				    newTransactionColumn, newTransactionRow, newTransactionRank,
+				    newTransactionBank, transaction->data, dramsim_log);
+
+
+
+		    commandQueue.enqueue(ACTcommand);
+		    commandQueue.enqueue(command);
+
+		    // If we have a read, save the transaction so when the data comes back
+		    // in a bus packet, we can staple it back into a transaction and return it
+		    if (transaction->transactionType == DATA_READ)
+		    {
+			    pendingReadTransactions.push_back(transaction);
+		    }
+		    else
+		    {
+			    // just delete the transaction now that it's a buspacket
+			    delete transaction; 
+		    }
+		    /* only allow one transaction to be scheduled per cycle -- this should
+		     * be a reasonable assumption considering how much logic would be
+		     * required to schedule multiple entries per cycle (parallel data
+		     * lines, switching logic, decision logic)
+		     */
+		    break;
 		}
 		else // no room, do nothing this cycle
 		{
 			//PRINT( "== Warning - No room in command queue" << endl;
 		}
+	    }
 	}
 
 
@@ -772,7 +982,7 @@ bool MemoryController::WillAcceptTransaction()
 bool MemoryController::addTransaction(Transaction *trans)
 {
 	//Prodromou: In case this ever happens I need to know
-	assert(trans->sourceId != -1 && "Prodromou: This shouldn't happen");
+	//assert(trans->sourceId != -1 && "Prodromou: This shouldn't happen");
 	//Prodromou
 
 	if (WillAcceptTransaction())

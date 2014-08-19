@@ -62,7 +62,11 @@ namespace DRAMSim
 
 	// Prodromou
 	int sourceId;
+	bool batched;
 
+	void addToBatch() { batched=true; };
+	bool isBatched () { return batched; };
+	//Prodromou
 
 	friend ostream &operator<<(ostream &os, const Transaction &t);
 	//functions

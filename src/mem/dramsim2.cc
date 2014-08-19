@@ -51,7 +51,7 @@ DRAMSim2::DRAMSim2(const Params* p) :
     AbstractMemory(p),
     port(name() + ".port", *this),
     wrapper(p->deviceConfigFile, p->systemConfigFile, p->filePath,
-            p->traceFile, p->range.size() / 1024 / 1024, p->enableDebug),
+            p->traceFile, p->range.size() / 1024 / 1024, p->enableDebug, p->policy),
     retryReq(false), retryResp(false),
     nbrOutstandingReads(0), nbrOutstandingWrites(0),
     drainManager(NULL),
@@ -229,7 +229,8 @@ DRAMSim2::recvTimingReq(PacketPtr pkt)
 	
 	//Prodromou: pkt->req->contextId() gives the cpu id that initiates the request (int)
 	//cout<<"Prodromou: Enqueueing packet from MasterID: "<<pkt->req->contextId()<<", "<<system()->getMasterName(pkt->req->masterId())<<endl;
-        wrapper.enqueue(pkt->isWrite(), pkt->getAddr(), pkt->req->contextId());
+	int c_id = pkt->req->hasContextId() ? pkt->req->contextId() : -1;
+        wrapper.enqueue(pkt->isWrite(), pkt->getAddr(), c_id);
 
         return true;
     } else {

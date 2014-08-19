@@ -57,7 +57,7 @@ namespace DRAMSim
 
     public:
 	//functions
-	MemoryController(MemorySystem* ms, CSVWriter &csvOut_, ostream &dramsim_log_);
+	MemoryController(MemorySystem* ms, CSVWriter &csvOut_, ostream &dramsim_log_, const string& _policy);
 	virtual ~MemoryController();
 
 	bool addTransaction(Transaction *trans);
@@ -123,6 +123,9 @@ namespace DRAMSim
 
 
 	unsigned refreshRank;
+
+	//Prodromou: Policy placeholder
+	string policy;
 	
     public:
 	// energy values are per rank -- SST uses these directly, so make these public 

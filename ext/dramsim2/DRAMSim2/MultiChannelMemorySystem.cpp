@@ -43,7 +43,7 @@
 using namespace DRAMSim; 
 
 
-MultiChannelMemorySystem::MultiChannelMemorySystem(const string &deviceIniFilename_, const string &systemIniFilename_, const string &pwd_, const string &traceFilename_, unsigned megsOfMemory_, string *visFilename_, const IniReader::OverrideMap *paramOverrides)
+MultiChannelMemorySystem::MultiChannelMemorySystem(const string &deviceIniFilename_, const string &systemIniFilename_, const string &pwd_, const string &traceFilename_, unsigned megsOfMemory_, const string& policy, string *visFilename_, const IniReader::OverrideMap *paramOverrides)
 	:megsOfMemory(megsOfMemory_), deviceIniFilename(deviceIniFilename_),
 	systemIniFilename(systemIniFilename_), traceFilename(traceFilename_),
 	pwd(pwd_), visFilename(visFilename_), 
@@ -99,7 +99,7 @@ MultiChannelMemorySystem::MultiChannelMemorySystem(const string &deviceIniFilena
 	}
 	for (size_t i=0; i<NUM_CHANS; i++)
 	{
-		MemorySystem *channel = new MemorySystem(i, megsOfMemory/NUM_CHANS, (*csvOut), dramsim_log);
+		MemorySystem *channel = new MemorySystem(i, megsOfMemory/NUM_CHANS, (*csvOut), dramsim_log, policy);
 		channels.push_back(channel);
 	}
 }
@@ -502,8 +502,8 @@ void MultiChannelMemorySystem::RegisterCallbacks(
 	}
 }
 namespace DRAMSim {
-MultiChannelMemorySystem *getMemorySystemInstance(const string &dev, const string &sys, const string &pwd, const string &trc, unsigned megsOfMemory, string *visfilename) 
-{
-	return new MultiChannelMemorySystem(dev, sys, pwd, trc, megsOfMemory, visfilename);
-}
+    MultiChannelMemorySystem *getMemorySystemInstance(const string &dev, const string &sys, const string &pwd, const string &trc, unsigned megsOfMemory, string *visfilename) 
+    {
+	return new MultiChannelMemorySystem(dev, sys, pwd, trc, megsOfMemory, "TEST2", visfilename);
+    }
 }
