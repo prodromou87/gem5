@@ -67,10 +67,11 @@ DRAMSim2Wrapper::DRAMSim2Wrapper(const std::string& config_file,
                                  const std::string& working_dir,
                                  const std::string& trace_file,
                                  unsigned int memory_size_mb,
-                                 bool enable_debug) :
+                                 bool enable_debug,
+				 const std::string& policy) :
     dramsim(new DRAMSim::MultiChannelMemorySystem(config_file, system_file,
                                                   working_dir, trace_file,
-                                                  memory_size_mb, NULL, NULL)),
+                                                  memory_size_mb, policy, NULL, NULL)),
     _clockPeriod(0.0), _queueSize(0), _burstSize(0)
 {
     // tell DRAMSim2 to ignore its internal notion of a CPU frequency
@@ -166,10 +167,12 @@ DRAMSim2Wrapper::canAccept() const
     return dramsim->willAcceptTransaction();
 }
 
+//Prodromou: Adding the source cpu id field
 void
-DRAMSim2Wrapper::enqueue(bool is_write, uint64_t addr)
+DRAMSim2Wrapper::enqueue(bool is_write, uint64_t addr, int cpu_id)
 {
-    bool success M5_VAR_USED = dramsim->addTransaction(is_write, addr);
+    //Prodromou: Send the requesting core id along with the request
+    bool success M5_VAR_USED = dramsim->addTransaction(is_write, addr, cpu_id);
     assert(success);
 }
 

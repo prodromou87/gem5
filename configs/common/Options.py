@@ -91,7 +91,7 @@ def addCommonOptions(parser):
     parser.add_option("--mem-channels", type="int", default=1,
                       help = "number of memory channels")
     parser.add_option("--mem-size", action="store", type="string",
-                      default="512MB",
+                      default="4GB",
                       help="Specify the physical memory size (single memory)")
 
     # Cache Options

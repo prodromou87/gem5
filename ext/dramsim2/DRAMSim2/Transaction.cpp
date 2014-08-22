@@ -43,11 +43,14 @@ using std::dec;
 
 namespace DRAMSim {
 
-Transaction::Transaction(TransactionType transType, uint64_t addr, void *dat) :
+Transaction::Transaction(TransactionType transType, uint64_t addr, void *dat, int source) :
 	transactionType(transType),
 	address(addr),
-	data(dat)
-{}
+	data(dat),
+	sourceId(source)
+{
+    batched=false;
+}
 
 Transaction::Transaction(const Transaction &t)
 	: transactionType(t.transactionType)
@@ -55,6 +58,8 @@ Transaction::Transaction(const Transaction &t)
 	  , data(NULL)
 	  , timeAdded(t.timeAdded)
 	  , timeReturned(t.timeReturned)
+	  , sourceId(t.sourceId)
+	  , batched(t.batched)
 {
 	#ifndef NO_STORAGE
 	ERROR("Data storage is really outdated and these copies happen in an \n improper way, which will eventually cause problems. Please send an \n email to dramninjas [at] gmail [dot] com if you need data storage");
@@ -79,4 +84,3 @@ ostream &operator<<(ostream &os, const Transaction &t)
 	return os; 
 }
 }
-

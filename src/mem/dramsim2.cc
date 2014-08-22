@@ -43,11 +43,15 @@
 #include "debug/Drain.hh"
 #include "mem/dramsim2.hh"
 #include "sim/system.hh"
+
+#include <iostream>
+using namespace std;
+
 DRAMSim2::DRAMSim2(const Params* p) :
     AbstractMemory(p),
     port(name() + ".port", *this),
     wrapper(p->deviceConfigFile, p->systemConfigFile, p->filePath,
-            p->traceFile, p->range.size() / 1024 / 1024, p->enableDebug),
+            p->traceFile, p->range.size() / 1024 / 1024, p->enableDebug, p->policy),
     retryReq(false), retryResp(false),
     nbrOutstandingReads(0), nbrOutstandingWrites(0),
     drainManager(NULL),
@@ -222,7 +226,11 @@ DRAMSim2::recvTimingReq(PacketPtr pkt)
         // @todo what about the granularity here, implicit assumption that
         // a transaction matches the burst size of the memory (which we
         // cannot determine without parsing the ini file ourselves)
-        wrapper.enqueue(pkt->isWrite(), pkt->getAddr());
+	
+	//Prodromou: pkt->req->contextId() gives the cpu id that initiates the request (int)
+	//cout<<"Prodromou: Enqueueing packet from MasterID: "<<pkt->req->contextId()<<", "<<system()->getMasterName(pkt->req->masterId())<<endl;
+	int c_id = pkt->req->hasContextId() ? pkt->req->contextId() : -1;
+        wrapper.enqueue(pkt->isWrite(), pkt->getAddr(), c_id);
 
         return true;
     } else {

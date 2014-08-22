@@ -53,3 +53,6 @@ class DRAMSim2(AbstractMemory):
                             "Directory to prepend to file names")
     traceFile = Param.String("", "Output file for trace generation")
     enableDebug = Param.Bool(False, "Enable DRAMSim2 debug output")
+
+    # Prodromou
+    policy = Param.String("par-bs", "The sceduling policy to be used by DRAMSim2")

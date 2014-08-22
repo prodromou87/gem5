@@ -148,7 +148,137 @@ wrf = LiveProcess()
 wrf.executable = './wrf_base.alpha'
 wrf.cmd = [wrf.executable]
 
+#X86 benchmarks
+perlbench_x86 = LiveProcess()
+perlbench.executable =  './perlbench_base.x86_64'
+perlbench.cmd = [perlbench.executable] + ['-I./lib', 'diffmail.pl', '4', '800', '10', '17', '19', '300']
 
+bzip2_x86 = LiveProcess()
+bzip2.executable =  './bzip2_base.x86_64'
+bzip2.cmd = [bzip2.executable] + ['input.combined', '200']
+
+gcc_x86 = LiveProcess()
+gcc.executable =  './gcc_base.x86_64'
+gcc.cmd = [gcc.executable] + ['scilab.i', '-o', 'scilab.s']
+
+mcf_x86 = LiveProcess()
+mcf.executable =  './mcf_base.x86_64'
+mcf.cmd = [mcf.executable] + ['inp.in']
+
+milc_x86 = LiveProcess()
+milc.executable = './milc_base.x86_64'
+stdin='su3imp.in'
+milc.cmd = [milc.executable]
+milc.input=stdin
+
+gobmk_x86 = LiveProcess()
+gobmk.executable = './gobmk_base.x86_64'
+stdin='13x13.tst'
+gobmk.cmd = [gobmk.executable] + ['--quiet', '--mode', 'gtp']
+gobmk.input=stdin
+
+hmmer_x86 = LiveProcess()
+hmmer.executable =  './hmmer_base.x86_64'
+hmmer.cmd = [hmmer.executable] + ['nph3.hmm', 'swiss41']
+
+sjeng_x86 = LiveProcess()
+sjeng.executable =  './sjeng_base.x86_64'
+sjeng.cmd = [sjeng.executable] + ['ref.txt']
+
+libquantum_x86 = LiveProcess()
+libquantum.executable =  './libquantum_base.x86_64'
+libquantum.cmd = [libquantum.executable] + ['1397', '8']
+
+h264ref_x86 = LiveProcess()
+h264ref.executable =  './h264ref_base.x86_64'
+h264ref.cmd = [h264ref.executable] + ['-d', 'foreman_ref_encoder_baseline.cfg']
+
+lbm_x86 = LiveProcess()
+lbm.executable =  './lbm_base.x86_64'
+lbm.cmd = [lbm.executable] + ['3000', 'reference.dat', '0', '0', '100_100_130_ldc.of']
+
+sphinx3_x86 = LiveProcess()
+sphinx3.executable =  './sphinx_livepretend_base.x86_64'
+sphinx3.cmd = [sphinx3.executable] + ['ctlfile', '.', 'args.an4']
+
+specrand_x86 = LiveProcess()
+specrand.executable =  './specrand_base.x86_64'
+specrand.cmd = [specrand.executable] + ['1255432124', '234923']
+
+# FORTRAN BENCHMARKS
+bwaves_x86 = LiveProcess()
+bwaves.executable = './bwaves_base.x86_64'
+bwaves.cmd = [bwaves.executable]
+
+gamess_x86 = LiveProcess()
+gamess.executable = './gamess_base.x86_64'
+stdin='triazolium.config'
+gamess.cmd = [gamess.executable]
+gamess.input=stdin
+
+zeusmp_x86 = LiveProcess()
+zeusmp.executable = './zeusmp_base.x86_64'
+zeusmp.cmd = [zeusmp.executable]
+
+leslie3d_x86 = LiveProcess()
+leslie3d.executable = './leslie3d_base.x86_64'
+stdin='leslie3d.in'
+leslie3d.cmd = [gamess.executable]
+leslie3d.input=stdin
+
+GemsFDTD_x86 = LiveProcess()
+GemsFDTD.executable = './GemsFDTD_base.x86_64'
+GemsFDTD.cmd = [GemsFDTD.executable]
+
+tonto_x86 = LiveProcess()
+tonto.executable = './tonto_base.x86_64'
+tonto.cmd = [tonto.executable]
+
+# CPP BENCHMARKS
+namd_x86 = LiveProcess()
+namd.executable =  './namd_base.x86_64'
+namd.cmd = [namd.executable] + ['--input', 'namd.input', '--iterations', '38', '--output', 'namd.out']
+
+dealII_x86 = LiveProcess()
+dealII.executable =  './dealII_base.x86_64'
+dealII.cmd = [dealII.executable] + ['23']
+
+soplex_x86 = LiveProcess()
+soplex.executable =  './soplex_base.x86_64'
+soplex.cmd = [soplex.executable] + ['-s1', '-e', '-m45000', 'pds-50.mps']
+
+povray_x86 = LiveProcess()
+povray.executable =  './povray_base.x86_64'
+povray.cmd = [povray.executable] + ['SPEC-benchmark-ref.ini']
+
+omnetpp_x86 = LiveProcess()
+omnetpp.executable =  './omnetpp_base.x86_64'
+omnetpp.cmd = [omnetpp.executable] + ['omnetpp.ini']
+
+astar_x86 = LiveProcess()
+astar.executable =  './astar_base.x86_64'
+astar.cmd = [astar.executable] + ['BigLakes2048.cfg']
+
+xalancbmk_x86 = LiveProcess()
+xalancbmk.executable =  './Xalan_base.x86_64'
+xalancbmk.cmd = [xalancbmk.executable] + ['-v', 't5.xml', 'xalanc.xsl']
+
+# MIXED BENCHMARKS
+gromacs_x86 = LiveProcess()
+gromacs.executable =  './gromacs_base.x86_64'
+gromacs.cmd = [gromacs.executable] + ['-silent', '-deffnm', 'gromacs', '-nice', '0']
+
+cactusADM_x86 = LiveProcess()
+cactusADM.executable =  './cactusADM_base.x86_64'
+cactusADM.cmd = [cactusADM.executable] + ['benchADM.par']
+
+calculix_x86 = LiveProcess()
+calculix.executable =  './calculix_base.x86_64'
+calculix.cmd = [calculix.executable] + ['-i', 'hyperviscoplastic']
+
+wrf_x86 = LiveProcess()
+wrf.executable = './wrf_base.x86_64'
+wrf.cmd = [wrf.executable]
 
 
 

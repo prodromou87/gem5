@@ -42,17 +42,17 @@ using std::ostream;
 
 namespace DRAMSim
 {
-enum TransactionType
-{
-	DATA_READ,
-	DATA_WRITE,
-	RETURN_DATA
-};
+    enum TransactionType
+    {
+	    DATA_READ,
+	    DATA_WRITE,
+	    RETURN_DATA
+    };
 
-class Transaction
-{
+    class Transaction
+    {
 	Transaction();
-public:
+    public:
 	//fields
 	TransactionType transactionType;
 	uint64_t address;
@@ -60,10 +60,17 @@ public:
 	uint64_t timeAdded;
 	uint64_t timeReturned;
 
+	// Prodromou
+	int sourceId;
+	bool batched;
+
+	void addToBatch() { batched=true; };
+	bool isBatched () { return batched; };
+	//Prodromou
 
 	friend ostream &operator<<(ostream &os, const Transaction &t);
 	//functions
-	Transaction(TransactionType transType, uint64_t addr, void *data);
+	Transaction(TransactionType transType, uint64_t addr, void *data, int source = -1);
 	Transaction(const Transaction &t);
 
 	BusPacketType getBusPacketType()
@@ -105,7 +112,7 @@ public:
 			abort();
 		}
 	}
-};
+    };
 
 }
 
