@@ -57,7 +57,7 @@ namespace DRAMSim
 
     public:
 	//functions
-	MemoryController(MemorySystem* ms, CSVWriter &csvOut_, ostream &dramsim_log_, const string& _policy);
+	MemoryController(MemorySystem* ms, CSVWriter &csvOut_, ostream &dramsim_log_, const string& _policy, const int procs);
 	virtual ~MemoryController();
 
 	bool addTransaction(Transaction *trans);
@@ -126,6 +126,7 @@ namespace DRAMSim
 
 	//Prodromou: Policy placeholder
 	string policy;
+	int numOfThreads;
 	
     public:
 	// energy values are per rank -- SST uses these directly, so make these public 

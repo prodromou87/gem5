@@ -64,7 +64,7 @@ extern float Vdd;
 
 using namespace DRAMSim;
 
-MemoryController::MemoryController(MemorySystem *parent, CSVWriter &csvOut_, ostream &dramsim_log_, const string& _policy) :
+MemoryController::MemoryController(MemorySystem *parent, CSVWriter &csvOut_, ostream &dramsim_log_, const string& _policy, const int procs) :
 		dramsim_log(dramsim_log_),
 		bankStates(NUM_RANKS, vector<BankState>(NUM_BANKS, dramsim_log)),
 		commandQueue(bankStates, dramsim_log_),
@@ -115,6 +115,9 @@ MemoryController::MemoryController(MemorySystem *parent, CSVWriter &csvOut_, ost
 
 	//Prodromou:
 	policy = _policy;
+	numOfThreads = procs;
+
+	cout <<"Prodromou: Created mem controller with policy: "<<policy<<" and procs: "<<numOfThreads<<endl;
 }
 
 //get a bus packet from either data or cmd bus
@@ -501,7 +504,6 @@ void MemoryController::update()
 	if (policy == "par-bs"){
 	    if (transactionQueue.size() != 0) {
 		if (!transactionQueue[0]->isBatched()){
-		    int numOfThreads = 8; //HACK: Fix this
 		    int totalBanks = NUM_RANKS * NUM_BANKS;
 		    
 		    //Bookeeping arrays

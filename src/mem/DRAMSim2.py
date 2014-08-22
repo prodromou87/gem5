@@ -56,3 +56,5 @@ class DRAMSim2(AbstractMemory):
 
     # Prodromou
     policy = Param.String("par-bs", "The sceduling policy to be used by DRAMSim2")
+    procs = Param.Int(4, "The number of processors passed to DRAMsim2. DO NOT MODIFY. Only the se python file sets this variable")
+

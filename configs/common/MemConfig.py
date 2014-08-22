@@ -158,6 +158,10 @@ def config_mem(options, system):
             # Create an instance so we can figure out the address
             # mapping and row-buffer size
             ctrl = cls()
+	    
+	    # Prodromou: Pass the number of CPUs to the DRAM
+	    if isinstance(ctrl, m5.objects.DRAMSim2):
+		ctrl.procs = options.num_cpus
 
             # Only do this for DRAMs
             if issubclass(cls, m5.objects.SimpleDRAM):

@@ -51,7 +51,7 @@ DRAMSim2::DRAMSim2(const Params* p) :
     AbstractMemory(p),
     port(name() + ".port", *this),
     wrapper(p->deviceConfigFile, p->systemConfigFile, p->filePath,
-            p->traceFile, p->range.size() / 1024 / 1024, p->enableDebug, p->policy),
+            p->traceFile, p->range.size() / 1024 / 1024, p->enableDebug, p->policy, p->procs),
     retryReq(false), retryResp(false),
     nbrOutstandingReads(0), nbrOutstandingWrites(0),
     drainManager(NULL),
