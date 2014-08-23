@@ -127,6 +127,13 @@ namespace DRAMSim
 	//Prodromou: Policy placeholder
 	string policy;
 	int numOfThreads;
+
+	// FOR TCM
+	//void tcm_scheduling();
+	//Don't need a bankState here since I'm only holding the open row
+	vector< vector< vector< int > > > ghostOpenRows;
+	//Holds the number of RB hits when thread runs alone
+	vector< int > shadowRBHitCount;
 	
     public:
 	// energy values are per rank -- SST uses these directly, so make these public 
