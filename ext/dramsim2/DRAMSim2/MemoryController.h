@@ -138,6 +138,8 @@ namespace DRAMSim
 	int samplingThreshold;
 	vector<int> reqPerThread;
 	vector<float> mpkiPerThread;
+	vector<int> BLP;
+	long samplesTaken;
 	
     public:
 	// energy values are per rank -- SST uses these directly, so make these public 

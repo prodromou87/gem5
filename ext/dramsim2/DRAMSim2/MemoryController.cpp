@@ -75,7 +75,11 @@ MemoryController::MemoryController(MemorySystem *parent, CSVWriter &csvOut_, ost
 		//Prodromou: Initialize 3-d ghost array (num_threads, num_ranks, num_banks
 		ghostOpenRows(procs, vector< vector< int > >(NUM_RANKS, vector< int >(NUM_BANKS, -1 )  )  ),
 		cur_tick(0),
-		samplingThreshold(10000)
+		samplingThreshold(10000),
+		reqPerThread(procs, 0),
+		mpkiPerThread(procs, 0.0),
+		BLP(procs, 0),
+		samplesTaken(0)
 {
 	//get handle on parent
 	parentMemorySystem = parent;
@@ -530,6 +534,9 @@ void MemoryController::update()
 
 		// Every samplingThreashold update information
 		if (cur_tick >= samplingThreshold) {
+
+		    samplesTaken++;
+
 		    //Update MPKI
 		    for (int tt_id=0; tt_id<numOfThreads; tt_id++) {
 			long long instCount = (*parentMemorySystem->getCommitedInsts)(tt_id, 0, 0);
@@ -537,6 +544,22 @@ void MemoryController::update()
 		    }
 
 		    //Update BLP
+		    vector<vector<bool> > bankRequests(numOfThreads, vector<bool>(NUM_RANKS*NUM_BANKS, false));
+		    for (int i=0; i<transactionQueue.size(); i++) {
+			Transaction *trans = transactionQueue[i]; 
+			unsigned Chan, Rank, Bank, Row, Column;
+			addressMapping(transaction->address, Chan,Rank, Bank,Row, Column);
+			
+			int tt_id = trans->sourceId;
+			int index = Rank * NUM_BANKS + Bank;
+			bankRequests[tt_id][index] = true;
+		    }
+		    
+		    for (int i=0; i<numOfThreads; i++) {
+			for (int j=0; j<bankRequests.size(); i++) {
+			    if (bankRequests[i][j]) BLP[i]++;
+			}
+		    }
 
 		    //Reset the counter
 		    cur_tick = 0;
