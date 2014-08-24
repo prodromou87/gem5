@@ -73,7 +73,8 @@ MemoryController::MemoryController(MemorySystem *parent, CSVWriter &csvOut_, ost
 		totalTransactions(0),
 		refreshRank(0),
 		//Prodromou: Initialize 3-d ghost array (num_threads, num_ranks, num_banks
-		ghostOpenRows(procs, vector< vector< int > >(NUM_RANKS, vector< int >(NUM_BANKS, -1 )  )  )
+		ghostOpenRows(procs, vector< vector< int > >(NUM_RANKS, vector< int >(NUM_BANKS, -1 )  )  ),
+		cur_tick(0)
 {
 	//get handle on parent
 	parentMemorySystem = parent;
@@ -511,6 +512,9 @@ void MemoryController::update()
 
 
 	if (policy == "tcm") {
+
+
+	    cur_tick++;
 	    if (transactionQueue.size() == 0) return;
 	    //tcm_scheduling();
 
@@ -522,6 +526,13 @@ void MemoryController::update()
 
 	    // Get the issuing thread
 	    int t_id = transaction->sourceId;
+
+	    if (cur_tick >= 10000) {
+		cout<<"Prodromou: Testing the callback"<<endl;
+		long long instCount = (*parentMemorySystem->getCommitedInsts)(t_id, 0, 0);
+		cout <<"Prodromou: The callback returned "<<instCount<<endl;
+		cur_tick = 0;
+	    }
 
 	    //Check for shadow row buffer hit
 	    if (ghostOpenRows[t_id][newTransactionRank][newTransactionBank] == newTransactionRow) {

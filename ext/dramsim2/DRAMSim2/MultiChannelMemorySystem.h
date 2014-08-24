@@ -60,6 +60,7 @@ class MultiChannelMemorySystem : public SimulatorObject
 	void RegisterCallbacks( 
 		TransactionCompleteCB *readDone,
 		TransactionCompleteCB *writeDone,
+		MPKI_CB *mpkiFunc,
 		void (*reportPower)(double bgpower, double burstpower, double refreshpower, double actprepower));
 
 	void InitOutputFiles(string tracefilename);

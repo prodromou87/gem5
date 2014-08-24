@@ -43,6 +43,7 @@
 #include "debug/Drain.hh"
 #include "mem/dramsim2.hh"
 #include "sim/system.hh"
+#include "cpu/o3/cpu.hh"
 
 #include <iostream>
 using namespace std;
@@ -66,7 +67,11 @@ DRAMSim2::DRAMSim2(const Params* p) :
     DRAMSim::TransactionCompleteCB* write_cb =
         new DRAMSim::Callback<DRAMSim2, void, unsigned, uint64_t, uint64_t>(
             this, &DRAMSim2::writeComplete);
-    wrapper.setCallbacks(read_cb, write_cb);
+    DRAMSim::MPKI_CB* mpki_cb =
+        new DRAMSim::Callback<DRAMSim2, long long, uint64_t, uint64_t, uint64_t>(
+            this, &DRAMSim2::getInstCount);
+
+    wrapper.setCallbacks(read_cb, write_cb, mpki_cb);
     // Register a callback to compensate for the destructor not
     // being called. The callback prints the DRAMSim2 stats.
     Callback* cb = new MakeCallback<DRAMSim2Wrapper,
@@ -338,6 +343,10 @@ void DRAMSim2::writeComplete(unsigned id, uint64_t addr, uint64_t cycle)
         drainManager->signalDrainDone();
         drainManager = NULL;
     }
+}
+
+long long DRAMSim2::getInstCount(uint64_t t_id, uint64_t u1, uint64_t u2) {
+   return ((system()->getThreadContext(t_id))->getCpuPtr())->getCommitedInsts(t_id);
 }
 
 BaseSlavePort&

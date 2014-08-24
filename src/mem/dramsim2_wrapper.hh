@@ -118,7 +118,8 @@ class DRAMSim2Wrapper
      * @param write_callback Callback used for write completions
      */
     void setCallbacks(DRAMSim::TransactionCompleteCB* read_callback,
-                      DRAMSim::TransactionCompleteCB* write_callback);
+                      DRAMSim::TransactionCompleteCB* write_callback,
+		      DRAMSim::MPKI_CB* mpkiFunc);
 
     /**
      * Determine if the controller can accept a new packet or not.

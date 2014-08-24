@@ -848,6 +848,13 @@ class FullO3CPU : public BaseO3CPU
     //number of misc
     Stats::Scalar miscRegfileReads;
     Stats::Scalar miscRegfileWrites;
+
+//Prodromou: Mem. Controller schemes need MPKI. I need 
+// to implement a function that transmits the number 
+// of commited instructions during execution
+public: 
+    long long getCommitedInsts(int t_id) { return committedInsts[0].value(); };
+
 };
 
 #endif // __CPU_O3_CPU_HH__

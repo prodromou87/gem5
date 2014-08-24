@@ -50,6 +50,8 @@
 namespace DRAMSim
 {
     typedef CallbackBase<void,unsigned,uint64_t,uint64_t> Callback_t;
+    //Prodromou: For MPKI measurement
+    typedef CallbackBase<long long ,uint64_t ,uint64_t,uint64_t> Callback_t2;
     class MemorySystem : public SimulatorObject
     {
 	ostream &dramsim_log;
@@ -69,6 +71,7 @@ namespace DRAMSim
 	void RegisterCallbacks(
 	    Callback_t *readDone,
 	    Callback_t *writeDone,
+	    Callback_t2 *mpkiFunc,
 	    void (*reportPower)(double bgpower, double burstpower, double refreshpower, double actprepower));
 
 	//fields
@@ -83,6 +86,11 @@ namespace DRAMSim
 	//TODO: make this a functor as well?
 	static powerCallBack_t ReportPower;
 	unsigned systemID;
+
+	//Prodromou: Creating a callback to be used when the 
+	//memory system needs the number of commited instructions 
+	//for MPKI measurement. For simplicity, two useless args are used
+	Callback_t2* getCommitedInsts;
 
     private:
 	CSVWriter &csvOut;

@@ -156,10 +156,11 @@ DRAMSim2Wrapper::printStats()
 
 void
 DRAMSim2Wrapper::setCallbacks(DRAMSim::TransactionCompleteCB* read_callback,
-                              DRAMSim::TransactionCompleteCB* write_callback)
+                              DRAMSim::TransactionCompleteCB* write_callback,
+			      DRAMSim::MPKI_CB* mpkiFunc)
 {
     // simply pass it on, for now we ignore the power callback
-    dramsim->RegisterCallbacks(read_callback, write_callback, NULL);
+    dramsim->RegisterCallbacks(read_callback, write_callback, mpkiFunc, NULL);
 }
 
 bool

@@ -50,6 +50,11 @@
 #include "mem/dramsim2_wrapper.hh"
 #include "mem/qport.hh"
 #include "params/DRAMSim2.hh"
+#include "cpu/o3/thread_context.hh"
+#include "cpu/o3/cpu.hh"
+
+class ThreadContext;
+class FullO3CPU<O3CPUImpl>;
 
 class DRAMSim2 : public AbstractMemory
 {
@@ -179,6 +184,11 @@ class DRAMSim2 : public AbstractMemory
      * @param cycle Internal cycle count of DRAMSim2
      */
     void writeComplete(unsigned id, uint64_t addr, uint64_t cycle);
+
+    // Prodromou: MPKI measurement callback. Last two arguments are 
+    // useless. Only used for easier programming
+    long long getInstCount (uint64_t t_id, uint64_t u1, uint64_t u2);
+
 
     unsigned int drain(DrainManager* dm);
 

@@ -479,6 +479,10 @@ class BaseCPU : public MemObject
     Stats::Scalar numCycles;
     Stats::Scalar numWorkItemsStarted;
     Stats::Scalar numWorkItemsCompleted;
+
+    //Prodromou: Let's see if this works
+    virtual long long getCommitedInsts(int t_id){ return 0; };
+
 };
 
 #endif // THE_ISA == NULL_ISA

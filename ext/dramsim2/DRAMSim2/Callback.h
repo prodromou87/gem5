@@ -81,6 +81,9 @@ private:
 };
 
 typedef CallbackBase <void, unsigned, uint64_t, uint64_t> TransactionCompleteCB;
+
+//Prodromou: For MPKI measurement: Two last arguments are not used anywhere
+typedef CallbackBase <long long, uint64_t, uint64_t, uint64_t> MPKI_CB;
 } // namespace DRAMSim
 
 #endif

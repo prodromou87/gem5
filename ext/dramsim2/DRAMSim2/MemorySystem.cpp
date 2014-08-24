@@ -238,11 +238,13 @@ void MemorySystem::update()
 }
 
 void MemorySystem::RegisterCallbacks( Callback_t* readCB, Callback_t* writeCB,
+				      Callback_t2 *mpkiFunc,
                                       void (*reportPower)(double bgpower, double burstpower,
-                                                          double refreshpower, double actprepower))
+				      double refreshpower, double actprepower))
 {
 	ReturnReadData = readCB;
 	WriteDataDone = writeCB;
+	getCommitedInsts = mpkiFunc;
 	ReportPower = reportPower;
 }
 
