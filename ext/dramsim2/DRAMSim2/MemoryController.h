@@ -135,6 +135,9 @@ namespace DRAMSim
 	//Holds the number of RB hits when thread runs alone
 	vector< int > shadowRBHitCount;
 	int cur_tick;
+	int samplingThreshold;
+	vector<int> reqPerThread;
+	vector<float> mpkiPerThread;
 	
     public:
 	// energy values are per rank -- SST uses these directly, so make these public 
