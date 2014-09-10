@@ -292,9 +292,10 @@ DRAMSim2::accessAndRespond(PacketPtr pkt)
 
 void DRAMSim2::readComplete(unsigned id, uint64_t addr, uint64_t cycle)
 {
+/*
     assert(cycle == divCeil(curTick(),
                             wrapper.clockPeriod() * SimClock::Int::ns));
-
+*/
     DPRINTF(DRAMSim2, "Read to address %lld complete\n", addr);
 
     // get the outstanding reads for the address in question
@@ -320,9 +321,10 @@ void DRAMSim2::readComplete(unsigned id, uint64_t addr, uint64_t cycle)
 
 void DRAMSim2::writeComplete(unsigned id, uint64_t addr, uint64_t cycle)
 {
+/*
     assert(cycle == divCeil(curTick(),
                             wrapper.clockPeriod() * SimClock::Int::ns));
-
+*/
     DPRINTF(DRAMSim2, "Write to address %lld complete\n", addr);
 
     // get the outstanding reads for the address in question

@@ -151,6 +151,8 @@ namespace DRAMSim
 	vector<int> sortedNiceness; //sortedNiceness[3]=4 means thread 4 is ranked third
 	int shuffleState;
 	void initTCM();
+	int chooseFromLatSensitiveCluster();
+	int chooseFromBwSensitiveCluster();
 	
 	
     public:

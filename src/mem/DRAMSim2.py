@@ -55,6 +55,6 @@ class DRAMSim2(AbstractMemory):
     enableDebug = Param.Bool(False, "Enable DRAMSim2 debug output")
 
     # Prodromou
-    policy = Param.String("par-bs", "The sceduling policy to be used by DRAMSim2")
+    policy = Param.String("tcm", "The sceduling policy to be used by DRAMSim2")
     procs = Param.Int(4, "The number of processors passed to DRAMsim2. DO NOT MODIFY. Only the se python file sets this variable")
 

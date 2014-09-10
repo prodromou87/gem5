@@ -41,6 +41,7 @@
 
 //Prodromou
 #include <cassert>
+#include <algorithm>
 //Prodromou
 
 #define SEQUENTIAL(rank,bank) (rank*NUM_BANKS)+bank
@@ -143,6 +144,90 @@ void MemoryController::initTCM() {
     for (int i=0; i<numOfThreads; i++) {
 	sortedNiceness[i] = i;
     }
+    shuffleState = numOfThreads-1;
+}
+
+int MemoryController::chooseFromLatSensitiveCluster() {
+    int chosenIndex = -1;
+
+    //Lower MPKI threads first
+    float minMpki = 0;
+    for (int i=0; i<latSensitive.size(); i++) {
+	
+	//Get the thread id of the stored transaction
+	int t_id = latSensitive[i]->sourceId;
+	if ((mpkiPerThread[t_id] < minMpki) || (i==0)) {
+	    minMpki = mpkiPerThread[t_id];
+	    chosenIndex = i;
+	}
+	else if (mpkiPerThread[t_id] == minMpki) { // Tie breaker: Row buffer Hit requests
+	    //find row buffer hit
+	    unsigned chan, rank, bank, row, column;
+	    unsigned chan2, rank2, bank2, row2, column2;
+	    //break down the competing requests
+	    addressMapping(latSensitive[chosenIndex]->address, chan, rank, bank, row, column);
+	    addressMapping(latSensitive[i]->address, chan2, rank2, bank2, row2, column2);
+	    if (bankStates[rank][bank].openRowAddress == row) { // No need to check the second any more
+		; // No need to do anything here
+	    }
+	    else if (bankStates[rank2][bank2].openRowAddress == row2) { //Found Row hit. Prioritize
+		chosenIndex = i;
+	    }
+	    else { // No row hits found. Need third tie breaker: Age
+		if (latSensitive[chosenIndex]->timeAdded > latSensitive[i]->timeAdded) {
+		    chosenIndex = i;
+		}
+	    }
+	}
+    }
+    return chosenIndex;
+}
+
+int MemoryController::chooseFromBwSensitiveCluster() {
+    int chosenIndex = -1;
+
+    // Threads are already sorted in sortedNiceness
+    for (int i=0; i<bwSensitive.size(); i++) {
+
+	if (i==0) {
+	    chosenIndex = 0;
+	}
+	else {
+	    //Get the thread id of the stored transaction
+	    int t_id = bwSensitive[i]->sourceId;
+	    if (t_id == bwSensitive[chosenIndex]->sourceId) { // If it's the same thread, we need tie-breakers
+		//find row buffer hit
+                unsigned chan, rank, bank, row, column;
+                unsigned chan2, rank2, bank2, row2, column2;
+                //break down the competing requests
+                addressMapping(bwSensitive[chosenIndex]->address, chan, rank, bank, row, column);
+                addressMapping(bwSensitive[i]->address, chan2, rank2, bank2, row2, column2);
+                if (bankStates[rank][bank].openRowAddress == row) { // No need to check the second any more
+                    ; // No need to do anything here
+                }
+                else if (bankStates[rank2][bank2].openRowAddress == row2) { //Found Row hit. Prioritize
+                    chosenIndex = i;
+                }
+                else { // No row hits found. Need third tie breaker: Age
+                    if (bwSensitive[chosenIndex]->timeAdded > bwSensitive[i]->timeAdded) {
+                        chosenIndex = i;
+                    }
+                }
+	    }
+	    else {
+		//find which thread is ranked higher (last) in sortedNiceness
+		vector<int>::iterator chosenIt, it2;
+		chosenIt = find (sortedNiceness.begin(), sortedNiceness.end(), bwSensitive[chosenIndex]->sourceId);
+		it2 = find (sortedNiceness.begin(), sortedNiceness.end(), t_id);
+		if (it2 == sortedNiceness.end()) {
+		}
+		else if (it2 > chosenIt) { //thread has higher priority
+		    chosenIndex = i;
+		}
+	    }
+	}
+    }
+    return chosenIndex;
 }
 
 //get a bus packet from either data or cmd bus
@@ -260,7 +345,6 @@ void MemoryController::update()
 			outgoingDataPacket=NULL;
 		}
 	}
-
 
 	//if any outstanding write data needs to be sent
 	//and the appropriate amount of time has passed (WL)
@@ -531,16 +615,41 @@ void MemoryController::update()
 
 	}
 
-
 	if (policy == "tcm") {
-
 	    quantumCounter++;
 	    cur_tick++;
 	    if (transactionQueue.size() != 0) {
 		//tcm_scheduling();
 
 		//Find the trnsaction to issue
-		Transaction *transaction = transactionQueue[0]; // Default behavior: Get the first element (pre-sorted according to ranks)
+		Transaction *transaction;
+
+		if (latSensitive.size() != 0) {
+		    int chosen = chooseFromLatSensitiveCluster();
+		    transaction = latSensitive[chosen];
+		    //delete from lat sensitive cluster
+		    latSensitive.erase(latSensitive.begin() + chosen);
+		    vector<Transaction*>::iterator it = find (transactionQueue.begin(), transactionQueue.end(), transaction);
+		    if (it != transactionQueue.end()) { 
+			transactionQueue.erase(it);
+		    }
+		    else {
+			assert(false && "Error: transaction found in lat sensitive but not found in transaction Queue");
+		    }
+		}
+		else { //Request(s) in bwSensitive cluster
+		    int chosen = chooseFromBwSensitiveCluster();
+		    transaction = bwSensitive[chosen];
+		    //delete from bw sensitive cluster
+		    bwSensitive.erase(bwSensitive.begin() + chosen);
+		    vector<Transaction*>::iterator it = find (transactionQueue.begin(), transactionQueue.end(), transaction);
+                    if (it != transactionQueue.end()) {
+                        transactionQueue.erase(it);
+                    }
+                    else {
+                        assert(false && "Error: transaction found in BW sensitive but not found in transaction Queue"); 
+                    }
+		}
 
 		unsigned newTransactionChan, newTransactionRank, newTransactionBank, newTransactionRow, newTransactionColumn;
 		addressMapping(transaction->address, newTransactionChan, newTransactionRank, newTransactionBank, newTransactionRow, newTransactionColumn);
@@ -565,16 +674,17 @@ void MemoryController::update()
 		    vector<vector<bool> > bankRequests(numOfThreads, vector<bool>(NUM_RANKS*NUM_BANKS, false));
 		    for (int i=0; i<transactionQueue.size(); i++) {
 			Transaction *trans = transactionQueue[i]; 
+			int tt_id = trans->sourceId;
+			if (tt_id == -1) continue;
+			
 			unsigned Chan, Rank, Bank, Row, Column;
 			addressMapping(transaction->address, Chan,Rank, Bank,Row, Column);
 			
-			int tt_id = trans->sourceId;
 			int index = Rank * NUM_BANKS + Bank;
 			bankRequests[tt_id][index] = true;
 		    }
-		    
 		    for (int i=0; i<numOfThreads; i++) {
-			for (int j=0; j<bankRequests[i].size(); i++) {
+			for (int j=0; j<bankRequests[i].size(); j++) {
 			    if (bankRequests[i][j]) BLP[i]++;
 			}
 		    }
@@ -601,8 +711,7 @@ void MemoryController::update()
 
 		    //Let's assume that samplingThreshold is 
 		    //also shuffleThreshold and do this here
-		
-		    if (shuffleState >= 0) {
+		    if (shuffleState >= 0) {	
 			int i= shuffleState; // READABILITY PURPOSES ONLY
 			//left shift (i, N-1)
 			//Create temp vector with the indices of interest
@@ -638,7 +747,7 @@ void MemoryController::update()
                         sortedNiceness.erase(sortedNiceness.begin()+i, sortedNiceness.end()-1);
                         //shift temp to the left
                         int t1 = temp.back();
-                        temp.erase(temp.end());
+                        temp.erase(temp.end()-1);
                         temp.insert(temp.begin(), t1);
                         //Add temp back into the original vector
                         sortedNiceness.insert( sortedNiceness.end(), temp.begin(), temp.end() );
@@ -646,26 +755,26 @@ void MemoryController::update()
 
 		    shuffleState --;
                     if (shuffleState == (-1-numOfThreads)) shuffleState = numOfThreads-1; //NEG HACK
-
 		}
 
-		//Check for shadow row buffer hit
-		if (ghostOpenRows[t_id][newTransactionRank][newTransactionBank] == newTransactionRow) {
-		    shadowRBHitCount[t_id] ++;
-		}
+		if (t_id != -1) {
+		    //Check for shadow row buffer hit
+		    if (ghostOpenRows[t_id][newTransactionRank][newTransactionBank] == newTransactionRow) {
+			shadowRBHitCount[t_id] ++;
+		    }
 
-		//Update Ghost Bank's status
-		// if we are sending a precharge packet reset the ghost row
-		// since it does not keep a row open
-		BusPacketType p_type = transaction->getBusPacketType();
-		if ((p_type != READ_P) && (p_type != WRITE_P)) {
-		    //Store the active row
-		    ghostOpenRows[t_id][newTransactionRank][newTransactionBank] = (int)newTransactionRow;
+		    //Update Ghost Bank's status
+		    // if we are sending a precharge packet reset the ghost row
+		    // since it does not keep a row open
+		    BusPacketType p_type = transaction->getBusPacketType();
+		    if ((p_type != READ_P) && (p_type != WRITE_P)) {
+			//Store the active row
+			ghostOpenRows[t_id][newTransactionRank][newTransactionBank] = (int)newTransactionRow;
+		    }
+		    else {
+			ghostOpenRows[t_id][newTransactionRank][newTransactionBank] = -1;
+		    }
 		}
-		else {
-		    ghostOpenRows[t_id][newTransactionRank][newTransactionBank] = -1;
-		}
-
 
 		// Thread Ranking. Performed at the end of a quantum
 		if (quantumCounter >= quantum) {
@@ -743,8 +852,6 @@ void MemoryController::update()
 		    quantumCounter = 0;
 		}
 
-
-
 		//if we have room, break up the transaction into the appropriate commands
 		//and add them to the command queue
 		if (commandQueue.hasRoomFor(2, newTransactionRank, newTransactionBank))
@@ -765,12 +872,7 @@ void MemoryController::update()
 			PRINT("  Row  : " << newTransactionRow);
 			PRINT("  Col  : " << newTransactionColumn);
 		    }
-		   
-		    //PRODROMOU: REMEMBER TO ERASE FROM THE CLUSTER!!!!!!!!!!!!!!!
-		    assert(false); 
-		    transactionQueue.erase(transactionQueue.begin());
-		    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
+		  
 		    //create activate command to the row we just translated
 		    BusPacket *ACTcommand = new BusPacket(ACTIVATE, transaction->address,
 				    newTransactionColumn, newTransactionRow, newTransactionRank,
@@ -801,7 +903,7 @@ void MemoryController::update()
 		}
 		else // no room, do nothing this cycle
 		{
-			//PRINT( "== Warning - No room in command queue" << endl;
+		    //PRINT( "== Warning - No room in command queue" << endl;
 		}
 	    }
 	}
@@ -1007,8 +1109,6 @@ void MemoryController::update()
 	    }
 	}
 	else { //Not par-bs. Do default (simple) scheduling
-	    cout<<"No such policy: "<<policy<<endl;
-	    exit(-1);
 	    for (size_t i=0;i<transactionQueue.size();i++)
 	    {
 		//pop off top transaction from queue
@@ -1180,7 +1280,6 @@ void MemoryController::update()
 			}
 		}
 	}
-
 	//check for outstanding data to return to the CPU
 	if (returnTransaction.size()>0)
 	{
@@ -1302,6 +1401,12 @@ bool MemoryController::addTransaction(Transaction *trans)
 		//Prodromou: Update statistics
 		if (policy == "tcm") {
 		    int t_id = trans->sourceId;
+
+		    if (t_id == -1) { // Special case. Just add it in the BW sensitive
+			bwSensitive.push_back(trans);
+			return true;
+		    }
+
 		    reqPerThread[t_id]++;
 
 		    //Divide requests in clusters
