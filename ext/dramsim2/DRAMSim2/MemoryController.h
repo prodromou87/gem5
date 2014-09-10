@@ -141,6 +141,18 @@ namespace DRAMSim
 	vector<int> BLP;
 	long samplesTaken;
 	
+	int quantumCounter;
+	int quantum;
+	float clusterThresh;
+	vector<bool> threadCluster; //True -> Lat-Sensitive, false -> BW-sensitive
+	vector<Transaction *> latSensitive;
+	vector<Transaction *> bwSensitive;
+	vector<int> threadNiceness;
+	vector<int> sortedNiceness; //sortedNiceness[3]=4 means thread 4 is ranked third
+	int shuffleState;
+	void initTCM();
+	
+	
     public:
 	// energy values are per rank -- SST uses these directly, so make these public 
 	vector< uint64_t > backgroundEnergy;

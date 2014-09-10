@@ -163,7 +163,7 @@ def config_mem(options, system):
 	    if isinstance(ctrl, m5.objects.DRAMSim2):
 		ctrl.procs = options.num_cpus
 		#HACK: Assign this value to an option
-		ctrl.policy = "tcm"
+		ctrl.policy = "par-bs"
 
             # Only do this for DRAMs
             if issubclass(cls, m5.objects.SimpleDRAM):

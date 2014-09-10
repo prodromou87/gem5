@@ -126,7 +126,23 @@ MemoryController::MemoryController(MemorySystem *parent, CSVWriter &csvOut_, ost
 	numOfThreads = procs;
 	shadowRBHitCount = vector<int>(numOfThreads, 0);
 
+	initTCM();
+
 	cout <<"Prodromou: Created mem controller with policy: "<<policy<<" and procs: "<<numOfThreads<<endl;
+}
+
+void MemoryController::initTCM() {
+    quantum = 1000000; //from paper
+    quantumCounter = 0;
+    clusterThresh = 4.0 / numOfThreads; // Paper suggests 2/N - 6/N
+    threadCluster = vector<bool>(numOfThreads, false);
+    latSensitive.reserve(TRANS_QUEUE_DEPTH); //Worst case all transactions are here
+    bwSensitive.reserve(TRANS_QUEUE_DEPTH); //Worst case all transactions are here
+    threadNiceness = vector<int>(numOfThreads, 0);
+    sortedNiceness = vector<int>(numOfThreads, 0);
+    for (int i=0; i<numOfThreads; i++) {
+	sortedNiceness[i] = i;
+    }
 }
 
 //get a bus packet from either data or cmd bus
@@ -518,7 +534,7 @@ void MemoryController::update()
 
 	if (policy == "tcm") {
 
-
+	    quantumCounter++;
 	    cur_tick++;
 	    if (transactionQueue.size() != 0) {
 		//tcm_scheduling();
@@ -537,11 +553,13 @@ void MemoryController::update()
 
 		    samplesTaken++;
 
-		    //Update MPKI
+/*
+		    //Update MPKI -> We shouldn't sample MPKI. No reason to do that
 		    for (int tt_id=0; tt_id<numOfThreads; tt_id++) {
 			long long instCount = (*parentMemorySystem->getCommitedInsts)(tt_id, 0, 0);
 			mpkiPerThread[tt_id] = (float)(reqPerThread[tt_id]*1000) / instCount; // *1000 for Kilo instructions
 		    }
+*/
 
 		    //Update BLP
 		    vector<vector<bool> > bankRequests(numOfThreads, vector<bool>(NUM_RANKS*NUM_BANKS, false));
@@ -556,13 +574,79 @@ void MemoryController::update()
 		    }
 		    
 		    for (int i=0; i<numOfThreads; i++) {
-			for (int j=0; j<bankRequests.size(); i++) {
+			for (int j=0; j<bankRequests[i].size(); i++) {
 			    if (bankRequests[i][j]) BLP[i]++;
 			}
 		    }
 
 		    //Reset the counter
 		    cur_tick = 0;
+
+/*
+		    //PSEUDOCODE FOR INSERTION SHUFFLING
+
+		    if (shuffleState >= 0) {
+			shiftLeft (shuffleState, N-1);
+		    }
+		    else if (shuffleState == -1) {
+			shiftRight (N-1, N-1);
+		    }
+		    else {
+			int leftIndex = abs(shuffleState) - 2;
+			shiftRight (leftIndex, N-1);
+		    }
+		    shuffleState --;
+		    if (shuffleState == negative(numOfhreads)) shuffleState = numOfThreads-1;
+*/
+
+		    //Let's assume that samplingThreshold is 
+		    //also shuffleThreshold and do this here
+		
+		    if (shuffleState >= 0) {
+			int i= shuffleState; // READABILITY PURPOSES ONLY
+			//left shift (i, N-1)
+			//Create temp vector with the indices of interest
+			vector<int> temp (sortedNiceness.begin()+i, sortedNiceness.end());
+			//delete indices of interest from original vector
+			sortedNiceness.erase(sortedNiceness.begin()+i, sortedNiceness.end());
+			//shift temp to the left
+			int t1 = temp[0];
+			temp.erase(temp.begin());
+			temp.push_back(t1);
+			//Add temp back into the original vector
+			sortedNiceness.insert( sortedNiceness.end(), temp.begin(), temp.end() );
+		    }
+		    else if (shuffleState == -1) {
+			int i=numOfThreads-1;
+			//left shift (N-1, N-1)
+			//Create temp vector with the indices of interest
+                        vector<int> temp (sortedNiceness.begin()+i, sortedNiceness.end());
+                        //delete indices of interest from original vector
+                        sortedNiceness.erase(sortedNiceness.begin()+i, sortedNiceness.end());
+                        //shift temp to the left
+                        int t1 = temp[0];
+                        temp.erase(temp.begin());
+                        temp.push_back(t1);
+                        //Add temp back into the original vector
+                        sortedNiceness.insert( sortedNiceness.end(), temp.begin(), temp.end() );
+		    }
+		    else {
+			int i = (shuffleState * (-1)) - 2; //ABS HACK
+			//right shift (i, N-1)
+			vector<int> temp (sortedNiceness.begin()+i, sortedNiceness.end());
+                        //delete indices of interest from original vector
+                        sortedNiceness.erase(sortedNiceness.begin()+i, sortedNiceness.end()-1);
+                        //shift temp to the left
+                        int t1 = temp.back();
+                        temp.erase(temp.end());
+                        temp.insert(temp.begin(), t1);
+                        //Add temp back into the original vector
+                        sortedNiceness.insert( sortedNiceness.end(), temp.begin(), temp.end() );
+		    }
+
+		    shuffleState --;
+                    if (shuffleState == (-1-numOfThreads)) shuffleState = numOfThreads-1; //NEG HACK
+
 		}
 
 		//Check for shadow row buffer hit
@@ -571,13 +655,94 @@ void MemoryController::update()
 		}
 
 		//Update Ghost Bank's status
-		// if we are sending a precharge packet simply ignore it
+		// if we are sending a precharge packet reset the ghost row
 		// since it does not keep a row open
 		BusPacketType p_type = transaction->getBusPacketType();
 		if ((p_type != READ_P) && (p_type != WRITE_P)) {
 		    //Store the active row
 		    ghostOpenRows[t_id][newTransactionRank][newTransactionBank] = (int)newTransactionRow;
 		}
+		else {
+		    ghostOpenRows[t_id][newTransactionRank][newTransactionBank] = -1;
+		}
+
+
+		// Thread Ranking. Performed at the end of a quantum
+		if (quantumCounter >= quantum) {
+
+		    //Calculate (avg) BW usage per thread
+		    float totalBwUsage = 0;
+		    for (int i=0; i<numOfThreads; i++) {
+			totalBwUsage += (float)(BLP[i]); //Maybe find better way for this?
+		    }
+		    totalBwUsage = totalBwUsage / samplesTaken;
+
+		    for (int i=0; i<numOfThreads; i++) {
+			//Get all MPKIs
+			long long instCount = (*parentMemorySystem->getCommitedInsts)(i, 0, 0);
+                        mpkiPerThread[i] = (float)(reqPerThread[i]*1000) / instCount;
+		    }
+
+		    //Categorize
+		    float sumBW = 0;
+		    for (int i=0; i<numOfThreads; i++) {
+			//Find smallest MPKI
+			int minMPKI = 0;
+			int minMpkiIndex = -1;
+			for (int j=0; j<mpkiPerThread.size(); j++) {
+			    if ((mpkiPerThread[j] < minMPKI) || (j==0)){
+				minMPKI = mpkiPerThread[j];
+				minMpkiIndex = j;
+			    }
+			}
+
+			sumBW = sumBW + ((float)(BLP[minMpkiIndex]) / samplesTaken);
+			if (sumBW <= clusterThresh * totalBwUsage) {
+			    threadCluster[minMpkiIndex] = true;
+			}
+			else {
+			    break;
+			}
+		    }
+
+		    //Calculate thread niceness
+		    for (int i=0; i<numOfThreads; i++) {
+			int Bi = 1; 
+			int Ri = 1;
+			for (int j=0; j<numOfThreads; j++) {
+			    //Only compare against threads in the BW sensitive cluster
+			    if ( ! threadCluster[j]) {
+				if (BLP[j] > BLP[i]) Bi++;
+				if (shadowRBHitCount[j] > shadowRBHitCount[i]) Ri++;
+			    }
+			}
+			threadNiceness[i] = Bi - Ri;
+		    }
+
+		    // Sort threadNiceness into sortedNiceness
+		    while(true) {
+			if (threadNiceness.size() == 0) break;
+			int minIndex = -1;
+			int min_temp;
+			for (int i=0; i<threadNiceness.size(); i++) {
+			    if ((threadNiceness[i] < min_temp) || (i == 0)) {
+				min_temp = threadNiceness[i];
+				minIndex = i;
+			    }
+			}
+			sortedNiceness.push_back(threadNiceness[minIndex]);
+			threadNiceness.erase(threadNiceness.begin() + minIndex);
+		    }
+
+		    //Reset necessary measurements
+		    for (int i=0; i<numOfThreads; i++) {
+			shadowRBHitCount[i] = 0;
+			BLP[i] = 0;
+		    }
+    		    samplesTaken = 0;
+		    quantumCounter = 0;
+		}
+
 
 
 		//if we have room, break up the transaction into the appropriate commands
@@ -600,8 +765,11 @@ void MemoryController::update()
 			PRINT("  Row  : " << newTransactionRow);
 			PRINT("  Col  : " << newTransactionColumn);
 		    }
-		    
+		   
+		    //PRODROMOU: REMEMBER TO ERASE FROM THE CLUSTER!!!!!!!!!!!!!!!
+		    assert(false); 
 		    transactionQueue.erase(transactionQueue.begin());
+		    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 		    //create activate command to the row we just translated
 		    BusPacket *ACTcommand = new BusPacket(ACTIVATE, transaction->address,
@@ -721,9 +889,9 @@ void MemoryController::update()
 			    while(true) {
 				if (temp.size() == 0) break;
 				int minIndex = -1;
-				int min_temp = 1000000;
+				int min_temp;
 				for (int i=0; i<temp.size(); i++) {
-				    if (temp[i]->timeAdded < min_temp) {
+				    if ((temp[i]->timeAdded < min_temp) || (i == 0)) {
 					min_temp = temp[i]->timeAdded;
 					minIndex = i;
 				    }
@@ -764,7 +932,9 @@ void MemoryController::update()
 		}
 		
 		Transaction *transaction = transactionQueue[0]; // Default behavior: Get the first element (pre-sorted according to ranks)
-		if (rowHitFound) transaction = transactionQueue[rowHitIndex]; // We want to prioritize row hits
+		if (rowHitFound) {
+		    transaction = transactionQueue[rowHitIndex]; // We want to prioritize row hits
+		}
 
 		// Prodromou: ONLY ONE TRANSACTION CAN BE SCHEDULED PER CYCLE (Same as default behavior even though they have a loop). 
 		// There is a break at the end of the default code that ensures that.
@@ -1133,6 +1303,11 @@ bool MemoryController::addTransaction(Transaction *trans)
 		if (policy == "tcm") {
 		    int t_id = trans->sourceId;
 		    reqPerThread[t_id]++;
+
+		    //Divide requests in clusters
+		    if (threadCluster[t_id]) latSensitive.push_back(trans);
+		    else bwSensitive.push_back(trans);
+
 		}
 
 		return true;

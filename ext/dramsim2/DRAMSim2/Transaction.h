@@ -38,6 +38,9 @@
 #include "SystemConfiguration.h"
 #include "BusPacket.h"
 
+#include <iostream>
+using namespace std;
+
 using std::ostream; 
 
 namespace DRAMSim
@@ -77,7 +80,7 @@ namespace DRAMSim
 	{
 		switch (transactionType)
 		{
-			case DATA_READ:
+		    case DATA_READ:
 			if (rowBufferPolicy == ClosePage)
 			{
 				return READ_P;
@@ -92,7 +95,7 @@ namespace DRAMSim
 				abort();
 			}
 			break;
-		case DATA_WRITE:
+		    case DATA_WRITE:
 			if (rowBufferPolicy == ClosePage)
 			{
 				return WRITE_P;
@@ -107,7 +110,8 @@ namespace DRAMSim
 				abort();
 			}
 			break;
-		default:
+		    default:
+			cout<<"Prodromou error: Came here with: "<<transactionType<<endl;
 			ERROR("This transaction type doesn't have a corresponding bus packet type");
 			abort();
 		}

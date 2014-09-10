@@ -102,7 +102,7 @@ def aggregate(options, args):
                                 merged.set(newsec, item[0], i)
                                 continue
                         merged.set(newsec, item[0], item[1])
-                else:a #x86
+                else: #x86
                     for item in items:
                         if item[0] == "paddr":
                             merged.set(newsec, item[0], int(item[1]) + (page_ptr << 12))
