@@ -296,6 +296,13 @@ if args:
 multiprocesses = []
 numThreads = 1
 
+#PRODROMOU
+if options.total_insts:
+    # Some thread HAS to execute AT LEAST this many instructions
+    # Gives a very coarse grain breakpoint for the resume logic to kick in
+    options.maxinsts = options.total_insts / options.num_cpus
+#PRODROMOU
+
 if options.bench:
     apps = options.bench.split("-")
     if len(apps) != options.num_cpus:

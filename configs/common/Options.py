@@ -105,6 +105,9 @@ def addCommonOptions(parser):
                  help="The benchmark to be loaded.")
     parser.add_option("--bench-size", default="ref",
                  help="The size of the benchmark <train/ref>")
+    parser.add_option("--total-insts", type="int", 
+		       default = 0, # by default "if options.total_insts" fails
+		 help="If defined, the simulation is going to keep running until the total number of instructions has been executed accross all threads")
 
     #PRODROMOU
     parser.add_option("--fastmem", action="store_true")

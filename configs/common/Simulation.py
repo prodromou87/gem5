@@ -331,7 +331,6 @@ def run(options, root, testsys, cpu_class):
 
             if options.checker:
                 repeat_switch_cpus[i].addCheckerCpu()
-
         testsys.repeat_switch_cpus = repeat_switch_cpus
 
         if cpu_class:
@@ -509,6 +508,34 @@ def run(options, root, testsys, cpu_class):
             exit_event = benchCheckpoints(options, maxtick, cptdir)
 
     print 'Exiting @ tick %i because %s' % (m5.curTick(), exit_event.getCause())
+
+    #PRODROMOU 
+    # This code ignores the exit signal and resumes simulation 
+    # until the desired number of instructions (accross all threads) is simulated
+    if options.total_insts:
+	totalNumberOfInsts = options.total_insts
+	#while mySum < totalNumberOfInsts:
+	while True:
+	    mySum = 0
+	    if exit_event.getCause() == "user interrupt received":
+		break
+	    
+	    for i in xrange(np):
+		mySum += root.system.switch_cpus[i].totalInsts()
+	    if mySum >= totalNumberOfInsts:
+		break
+	    
+	    cyclesLeft = (totalNumberOfInsts - mySum) * 750
+	    exit_event = m5.simulate(cyclesLeft)
+       
+	mySum=0
+	for i in xrange(np):
+	    mySum += root.system.switch_cpus[i].totalInsts()
+	    print 'Instructions on cpu %i: %i' % (i, root.system.switch_cpus[i].totalInsts())
+
+	print 'Total number of instructions: %i' % (mySum) 
+    #PRODROMOU
+
     if options.checkpoint_at_end:
         m5.checkpoint(joinpath(cptdir, "cpt.%d"))
 
