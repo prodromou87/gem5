@@ -525,7 +525,7 @@ def run(options, root, testsys, cpu_class):
 	    if mySum >= totalNumberOfInsts:
 		break
 	    
-	    cyclesLeft = (totalNumberOfInsts - mySum) * 750
+	    cyclesLeft = (totalNumberOfInsts - mySum) * 250
 	    exit_event = m5.simulate(cyclesLeft)
        
 	mySum=0
