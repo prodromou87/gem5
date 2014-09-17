@@ -46,9 +46,12 @@ from m5.objects import *
 # starting point, and specific parameters can be overridden in the
 # specific instantiations.
 
+# Prodromou: Configuration according to intel core i7
+# Source: http://people.cs.clemson.edu/~mark/330/multicore.txt
+
 class L1Cache(BaseCache):
-    assoc = 2
-    hit_latency = 2
+    assoc = 4
+    hit_latency = 4
     response_latency = 2
     mshrs = 4
     tgts_per_mshr = 20
