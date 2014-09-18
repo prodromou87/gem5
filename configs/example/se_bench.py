@@ -436,5 +436,6 @@ else:
     CacheConfig.config_cache(options, system)
     MemConfig.config_mem(options, system)
 
+m5.disableAllListeners()
 root = Root(full_system = False, system = system)
 Simulation.run(options, root, system, FutureClass)

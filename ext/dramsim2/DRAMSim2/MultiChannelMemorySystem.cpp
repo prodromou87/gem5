@@ -435,7 +435,7 @@ ostream &MultiChannelMemorySystem::getLogFile()
 bool MultiChannelMemorySystem::addTransaction(const Transaction &trans)
 {
 	// copy the transaction and send the pointer to the new transaction 
-	return addTransaction(new Transaction(trans)); 
+	return addTransaction(new Transaction(trans));
 }
 
 bool MultiChannelMemorySystem::addTransaction(Transaction *trans)

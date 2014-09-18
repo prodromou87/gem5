@@ -1017,7 +1017,6 @@ void MemoryController::update()
 		// Do the actual scheduling for par-bs
 		// Find the next transaction among the batched transactions. 
 		// Search for row hits otherwise return the first element
-		
 		bool rowHitFound = false;
 		int rowHitIndex = -1;
 		for (size_t i=0;i<transactionQueue.size();i++) {

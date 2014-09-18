@@ -250,8 +250,19 @@ BasePrefetcher::notify(PacketPtr &pkt, Tick tick)
             PacketPtr prefetch =
                 new Packet(prefetchReq, MemCmd::HardPFReq);
             prefetch->allocate();
-            prefetch->req->setThreadContext(pkt->req->contextId(),
-                                            pkt->req->threadId());
+	    // Prodromou: Fix for hitting the assertion and failing
+	    // Source: https://www.mail-archive.com/gem5-users@gem5.org/msg10439.html
+	    // and https://www.mail-archive.com/gem5-dev@gem5.org/msg03781.html
+	    //--------ORIGINAL CODE---------------------------//
+            //prefetch->req->setThreadContext(pkt->req->contextId(),
+            //                                pkt->req->threadId());
+	    //--------ORIGINAL CODE---------------------------//
+	    //-------------FIX--------------------------------//
+	    if (pkt->req->hasContextId()) {
+		prefetch->req->setThreadContext(pkt->req->contextId(),
+						pkt->req->threadId());
+	    }
+	    //-------------FIX--------------------------------//
 
             // We just remove the head if we are full
             if (pf.size() == size) {

@@ -135,7 +135,10 @@ def findCptDir(options, cptdir, testsys):
                 fatal('Unable to find simpoint')
             inst += int(testsys.cpu[0].workload[0].simpoint)
 
-        checkpoint_dir = joinpath(cptdir, "cpt.%s.%s" % (options.bench, inst))
+	if options.ckpt_nickname:
+	    checkpoint_dir = joinpath(cptdir, "cpt.%s.%s" % (options.ckpt_nickname, inst))
+        else:
+	    checkpoint_dir = joinpath(cptdir, "cpt.%s.%s" % (options.bench, inst))
         if not exists(checkpoint_dir):
             fatal("Unable to find checkpoint directory %s", checkpoint_dir)
     else:
