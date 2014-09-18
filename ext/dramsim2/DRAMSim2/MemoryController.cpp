@@ -616,6 +616,10 @@ void MemoryController::update()
 	}
 
 	if (policy == "tcm") {
+
+	    bool foundInLatSensitive = false;
+	    int chosen = -1;
+
 	    quantumCounter++;
 	    cur_tick++;
 	    if (transactionQueue.size() != 0) {
@@ -625,30 +629,16 @@ void MemoryController::update()
 		Transaction *transaction;
 
 		if (latSensitive.size() != 0) {
-		    int chosen = chooseFromLatSensitiveCluster();
+		    chosen = chooseFromLatSensitiveCluster();
 		    transaction = latSensitive[chosen];
-		    //delete from lat sensitive cluster
-		    latSensitive.erase(latSensitive.begin() + chosen);
-		    vector<Transaction*>::iterator it = find (transactionQueue.begin(), transactionQueue.end(), transaction);
-		    if (it != transactionQueue.end()) { 
-			transactionQueue.erase(it);
-		    }
-		    else {
-			assert(false && "Error: transaction found in lat sensitive but not found in transaction Queue");
-		    }
+
+		    foundInLatSensitive = true;
 		}
 		else { //Request(s) in bwSensitive cluster
-		    int chosen = chooseFromBwSensitiveCluster();
+		    chosen = chooseFromBwSensitiveCluster();
 		    transaction = bwSensitive[chosen];
-		    //delete from bw sensitive cluster
-		    bwSensitive.erase(bwSensitive.begin() + chosen);
-		    vector<Transaction*>::iterator it = find (transactionQueue.begin(), transactionQueue.end(), transaction);
-                    if (it != transactionQueue.end()) {
-                        transactionQueue.erase(it);
-                    }
-                    else {
-                        assert(false && "Error: transaction found in BW sensitive but not found in transaction Queue"); 
-                    }
+
+		    foundInLatSensitive = false;
 		}
 
 		unsigned newTransactionChan, newTransactionRank, newTransactionBank, newTransactionRow, newTransactionColumn;
@@ -872,7 +862,24 @@ void MemoryController::update()
 			PRINT("  Row  : " << newTransactionRow);
 			PRINT("  Col  : " << newTransactionColumn);
 		    }
-		  
+
+		    //Now that we know there is room we can delete the transaction
+		    if (foundInLatSensitive) {
+			latSensitive.erase(latSensitive.begin() + chosen);
+		    }
+		    else {
+			bwSensitive.erase(bwSensitive.begin() + chosen);
+		    }
+		    
+		    vector<Transaction*>::iterator it = find (transactionQueue.begin(), transactionQueue.end(), transaction);
+                    if (it != transactionQueue.end()) {
+                        transactionQueue.erase(it);
+                    }
+                    else {
+                        assert(false && "Error: transaction found in lat sensitive but not found in transaction Queue");
+                    }
+		    
+ 
 		    //create activate command to the row we just translated
 		    BusPacket *ACTcommand = new BusPacket(ACTIVATE, transaction->address,
 				    newTransactionColumn, newTransactionRow, newTransactionRank,
