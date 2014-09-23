@@ -61,7 +61,7 @@ class L2Cache(BaseCache):
     assoc = 8
     hit_latency = 20
     response_latency = 20
-    mshrs = 20
+    mshrs = 32
     tgts_per_mshr = 12
     write_buffers = 8
 

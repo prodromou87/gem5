@@ -249,7 +249,7 @@ def get_processes(options):
 	else:
 	    print "Error: Not supported benchmark size"
 	    sys.exit(1)
-	
+
 	multiprocesses.append(process)
 	return multiprocesses, 1
 
@@ -433,7 +433,11 @@ if options.ruby:
 else:
     system.membus = CoherentBus()
     system.system_port = system.membus.slave
-    CacheConfig.config_cache(options, system)
+    
+    if options.mempolicy == 'par-bs':
+	CacheConfig.config_cache_parbs(options, system)
+    else:
+	CacheConfig.config_cache(options, system)
     MemConfig.config_mem(options, system)
 
 m5.disableAllListeners()

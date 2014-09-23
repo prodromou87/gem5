@@ -115,12 +115,18 @@ Process::Process(ProcessParams * params)
     // initialize file descriptors to default: same as simulator
     int stdin_fd, stdout_fd, stderr_fd;
 
-    if (in == "stdin" || in == "cin")
+    if (in == "stdin" || in == "cin") {
+	cout <<"Prodromou: Opening stdin"<<endl;
         stdin_fd = STDIN_FILENO;
-    else if (in == "None")
+    }
+    else if (in == "None") {
+	cout<<"Prodromou: Nothing was passed"<<endl;
         stdin_fd = -1;
-    else
+    }
+    else {
+	cout<<"Prodromou: Opening "<<in<<endl;
         stdin_fd = Process::openInputFile(in);
+    }
 
     if (out == "stdout" || out == "cout")
         stdout_fd = STDOUT_FILENO;

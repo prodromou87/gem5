@@ -45,6 +45,55 @@ import m5
 from m5.objects import *
 from Caches import *
 
+def config_cache_parbs(options, system):
+    if options.cpu_type == "arm_detailed":
+        try:
+            from O3_ARM_v7a import *
+        except:
+            print "arm_detailed is unavailable. Did you compile the O3 model?"
+            sys.exit(1)
+
+	dcache_class, icache_class, l2_cache_class, l3_cache_class = \
+            O3_ARM_v7a_DCache, O3_ARM_v7a_ICache, O3_ARM_v7aL2, O3_ARM_v7aL3
+    else:
+        dcache_class, icache_class, l2_cache_class, l3_cache_class = \
+            L1Cache, L1Cache, L2Cache, L3Cache
+
+    # Set the cache line size of the system
+    system.cache_line_size = options.cacheline_size
+
+
+    for i in xrange(options.num_cpus):
+	icache = icache_class(size=options.l1i_size,
+			      assoc=options.l1i_assoc)
+	dcache = dcache_class(size=options.l1d_size,
+			      assoc=options.l1d_assoc)
+
+	# Create one l2 cache per core
+	system.cpu[i].l2 = l2_cache_class(clk_domain=system.cpu_clk_domain,
+					    size=options.l2_size,
+					    assoc=options.l2_assoc)
+	system.cpu[i].tol2bus = CoherentBus(clk_domain = system.cpu_clk_domain,
+					    width=32)
+	system.cpu[i].l2.cpu_side = system.cpu[i].tol2bus.master
+	system.cpu[i].l2.mem_side = system.membus.slave
+
+	# When connecting the caches, the clock is also inherited
+	# from the CPU in question
+	if buildEnv['TARGET_ISA'] == 'x86':
+	    system.cpu[i].addPrivateSplitL1Caches(icache, dcache,
+						  PageTableWalkerCache(),
+						  PageTableWalkerCache())
+	else:
+	    system.cpu[i].addPrivateSplitL1Caches(icache, dcache)
+
+        system.cpu[i].createInterruptController()
+
+	system.cpu[i].connectAllPorts(system.cpu[i].tol2bus, system.membus)
+
+    return system
+
+
 def config_cache(options, system):
     if options.cpu_type == "arm_detailed":
         try:

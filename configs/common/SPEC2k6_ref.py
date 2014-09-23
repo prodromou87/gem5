@@ -167,9 +167,8 @@ mcf_x86.cmd = [mcf_x86.executable] + ['inp.in']
 
 milc_x86 = LiveProcess()
 milc_x86.executable = './milc_base.x86_64'
-stdin='su3imp.in'
 milc_x86.cmd = [milc_x86.executable]
-milc.input=stdin
+milc_x86.input='su3imp.in'
 
 gobmk_x86 = LiveProcess()
 gobmk_x86.executable = './gobmk_base.x86_64'
