@@ -443,7 +443,7 @@ else:
     system.membus = CoherentBus()
     system.system_port = system.membus.slave
     
-    if options.mempolicy == 'par-bs':
+    if options.mutlu:
 	CacheConfig.config_cache_parbs(options, system)
     else:
 	CacheConfig.config_cache(options, system)

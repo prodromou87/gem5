@@ -112,6 +112,8 @@ def addCommonOptions(parser):
 		 help="The memory controller scheduling policy to be used")
     parser.add_option("--ckpt-nickname", default=None, type="string",
 		 help="If defined, the simulator will use it as part of the checkpoint's name. Example (nickname set as memIntense): cpt.memIntense.20140693 instead of cpt.None.20140693")
+    parser.add_option("--mutlu", action="store_true",
+                 help="Creates the mem hierarchy used in Mutlu's Par-BS paper")
 
     #PRODROMOU
     parser.add_option("--fastmem", action="store_true")
