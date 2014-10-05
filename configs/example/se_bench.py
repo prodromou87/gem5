@@ -301,6 +301,15 @@ if options.total_insts:
     # Some thread HAS to execute AT LEAST this many instructions
     # Gives a very coarse grain breakpoint for the resume logic to kick in
     options.maxinsts = options.total_insts / options.num_cpus
+
+if options.checkpoint_restore and options.take_checkpoints:
+    print "Both restore and record checkpoint options enabled. "
+    cr_value = int(options.checkpoint_restore)
+    tc_value = int(options.take_checkpoints)
+    difference = tc_value - cr_value
+    options.take_checkpoints = str(difference)
+    print "Value stored is: " + options.take_checkpoints
+
 #PRODROMOU
 
 if options.bench:
