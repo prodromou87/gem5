@@ -224,13 +224,19 @@ class SimpleDRAM : public AbstractMemory
         BurstHelper* burstHelper;
         Bank& bank_ref;
 
+	//Prodromou: Used for par-bs
+	bool batched;
+	int thread;
+
         DRAMPacket(PacketPtr _pkt, uint8_t _rank, uint16_t _bank,
                    uint16_t _row, Addr _addr, unsigned int _size,
                    Bank& _bank_ref)
             : entryTime(curTick()), readyTime(curTick()),
               pkt(_pkt), rank(_rank), bank(_bank), row(_row), addr(_addr),
-              size(_size), burstHelper(NULL), bank_ref(_bank_ref)
-        { }
+              size(_size), burstHelper(NULL), bank_ref(_bank_ref), batched(false)
+        { 
+	    thread = _pkt->req->hasContextId() ? _pkt->req->contextId() : -1;
+	}
 
     };
 
@@ -402,6 +408,18 @@ class SimpleDRAM : public AbstractMemory
 
     void printParams() const;
     void printQs() const;
+
+    //Prodromou: Used to rank threads (for scheduling)
+    std::vector<int> threadRank; //threadRank[2]=1 -> thread #2 is ranked first
+    int batchedInsts;
+    
+    //Prodromou: Par BS variables
+    int numOfThreads;
+
+    //Prodromou: Functions added for par-bs
+    void parbsNextWrite();
+    void parbsNextRead();
+    void parbsCheckForBatch();
 
     /**
      * The controller's main read and write queues

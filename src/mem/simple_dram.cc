@@ -88,6 +88,14 @@ SimpleDRAM::SimpleDRAM(const SimpleDRAMParams* p) :
     // round the write threshold percent to a whole number of entries
     // in the buffer
     writeThreshold = writeBufferSize * writeThresholdPerc / 100.0;
+
+    //Prodromou
+    batchedInsts = 0;
+    numOfThreads = p->procs; //HACK
+    cout<<"Created simple dram with "<<numOfThreads<<" threads"<<endl;
+    if (memSchedPolicy == Enums::fcfs) cout<<"Policy: FCFS"<<endl;
+    if (memSchedPolicy == Enums::frfcfs) cout<<"Policy: FRFCFS"<<endl;
+    if (memSchedPolicy == Enums::parbs) cout<<"Policy: PARBS"<<endl;
 }
 
 void
@@ -847,7 +855,11 @@ SimpleDRAM::chooseNextWrite()
             }
             ++i;
         }
-    } else
+    } else if (memSchedPolicy == Enums::parbs) { 
+	//Prodromou: Try to implement parbs logic here to speed up simulations
+	parbsNextWrite();
+    }
+    else
         panic("No scheduling policy chosen\n");
 
     DPRINTF(DRAMWR, "Selected next write request\n");
@@ -866,8 +878,11 @@ SimpleDRAM::chooseNextRead()
     }
 
     // If there is only one request then there is nothing left to do
-    if (readQueue.size() == 1)
+    // Prodromou: For par-bs I need to follow the entire procedure 
+    // in order to take care of batching and book-keeping
+    if ((readQueue.size() == 1) && (memSchedPolicy != Enums::parbs)){
         return true;
+    }
 
     if (memSchedPolicy == Enums::fcfs) {
         // Do nothing, since the request to serve is already the first
@@ -886,11 +901,178 @@ SimpleDRAM::chooseNextRead()
                 ;
             }
         }
+    } else if (memSchedPolicy == Enums::parbs) {
+	parbsNextRead();
     } else
         panic("No scheduling policy chosen!\n");
 
     DPRINTF(DRAM, "Selected next read request\n");
     return true;
+}
+
+void
+SimpleDRAM::parbsNextRead() {
+    //First create new batch if necessary
+    parbsCheckForBatch();
+
+    //The threads are ranked. We need to find a row hit or the oldest 
+    //request of the highest ranked thread. Requests are stored in 
+    //chronological order so we don't need to worry about finding the 
+    //oldest one
+
+    // This will store the request with the highest priority in case 
+    // we don't find a row buffer hit
+    auto prioPkt = readQueue.begin();
+
+    for (auto i = readQueue.begin(); i != readQueue.end() ; ++i) {
+	DRAMPacket* dram_pkt = *i;
+	const Bank& bank = dram_pkt->bank_ref;
+
+	int prioRank = threadRank[(*prioPkt)->thread];
+	int competingRank = threadRank[dram_pkt->thread];
+	if (competingRank < prioRank) {
+	    prioPkt = i;
+	}
+
+	// Check if it is a row hit
+	if (bank.openRow == dram_pkt->row) { //FR part
+	    DPRINTF(DRAM, "Row buffer hit\n");
+	    readQueue.erase(i);
+	    readQueue.push_front(dram_pkt);
+	    break;
+	} 
+    }
+
+    // No row buffer hit found. We are going with the PrioPkt option
+    DRAMPacket* prio_pkt = *prioPkt;
+    readQueue.erase(prioPkt);
+    readQueue.push_front(prio_pkt);
+
+    //Done. Decrement the number of batched instructions
+    batchedInsts--;
+}
+
+void 
+SimpleDRAM::parbsNextWrite() {
+    //First create new batch if necessary
+    parbsCheckForBatch();
+
+    //The threads are ranked. We need to find a row hit or the oldest
+    //request of the highest ranked thread. Requests are stored in
+    //chronological order so we don't need to worry about finding the
+    //oldest one
+
+    // This will store the request with the highest priority in case
+    // we don't find a row buffer hit
+    auto prioPkt = writeQueue.begin();
+
+    for (auto i = writeQueue.begin(); i != writeQueue.end() ; ++i) {
+        DRAMPacket* dram_pkt = *i;
+        const Bank& bank = dram_pkt->bank_ref;
+
+        int prioRank = threadRank[(*prioPkt)->thread];
+        int competingRank = threadRank[dram_pkt->thread];
+        if (competingRank < prioRank) {
+            prioPkt = i;
+        }
+
+        // Check if it is a row hit
+        if (bank.openRow == dram_pkt->row) { //FR part
+            DPRINTF(DRAM, "Row buffer hit\n");
+            writeQueue.erase(i);
+            writeQueue.push_front(dram_pkt);
+            break;
+        }
+    }
+
+    // No row buffer hit found. We are going with the PrioPkt option
+    DRAMPacket* prio_pkt = *prioPkt;
+    writeQueue.erase(prioPkt);
+    writeQueue.push_front(prio_pkt);
+
+    //Done. Decrement the number of batched instructions
+    batchedInsts--;
+}
+
+void
+SimpleDRAM::parbsCheckForBatch() {
+    if (batchedInsts > 0) return;
+ 
+ 
+    //Initialize book-keeping arrays
+    int totalBanks = ranksPerChannel * banksPerRank;
+    int totalBatchedRequests[numOfThreads];
+    int maxPerBank[numOfThreads];
+    int perBankRequests[numOfThreads][totalBanks];
+
+    for (int i=0; i<numOfThreads; i++) {
+	totalBatchedRequests[i] = 0;
+	maxPerBank[i]=0;
+	for (int j=0; j<totalBanks; j++) perBankRequests[i][j] = 0;
+    }
+ 
+    //Create batch and collect info
+    //All outstanding requests will be batched
+    for (auto i = readQueue.begin(); i != readQueue.end() ; ++i) {
+	DRAMPacket* dram_pkt = *i;
+	dram_pkt->batched = true;
+	batchedInsts ++;
+
+	int bankId = dram_pkt->bank;
+	int threadId = dram_pkt->thread; // Some are -1
+	if (threadId == -1) continue;
+
+	totalBatchedRequests[threadId]++;
+	perBankRequests[threadId][bankId]++;
+	if (perBankRequests[threadId][bankId] > maxPerBank[threadId]) {
+	    maxPerBank[threadId] = perBankRequests[threadId][bankId];
+	}
+    }
+    for (auto i = writeQueue.begin(); i != writeQueue.end() ; ++i) {
+        DRAMPacket* dram_pkt = *i;
+	dram_pkt->batched = true;
+	batchedInsts ++;
+
+	int bankId = dram_pkt->bank;
+        int threadId = dram_pkt->thread; // Some are -1
+        if (threadId == -1) continue;
+
+        totalBatchedRequests[threadId]++;
+        perBankRequests[threadId][bankId]++;
+        if (perBankRequests[threadId][bankId] > maxPerBank[threadId]) {
+            maxPerBank[threadId] = perBankRequests[threadId][bankId];
+        }
+    }
+    //Batch created and info collected
+
+    //Generate thread ranking
+    threadRank.clear();
+    while (true) {
+	int min = 1000000; //Hack but should be fine
+	int minId = -1;
+
+	for (int i=0; i<numOfThreads; i++) {
+	    if (maxPerBank[i] == 0) continue;
+	    if (maxPerBank[i] < min) {
+		min = maxPerBank[i];
+		minId = i;
+	    }
+	    else if (maxPerBank[i] == min) { // We need the tie-breaker
+		if (totalBatchedRequests[i] < totalBatchedRequests[minId]) {
+		    minId = i; // No need to change min since they are equal
+		}
+	    }
+	}
+    
+	if (minId != -1) { //Found min
+	    threadRank.push_back(minId);
+	    maxPerBank[minId] = 0;
+	}
+	else {
+	    break;
+	}
+    }
+    //Done! 
 }
 
 void

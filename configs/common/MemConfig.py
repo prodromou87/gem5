@@ -169,6 +169,8 @@ def config_mem(options, system):
                 # Inform each controller how many channels to account
                 # for
                 ctrl.channels = nbr_mem_ctrls
+		ctrl.mem_sched_policy = options.mempolicy
+		ctrl.procs = options.num_cpus
 
                 # If the channel bits are appearing after the column
                 # bits, we need to add the appropriate number of bits

@@ -108,7 +108,7 @@ def addCommonOptions(parser):
     parser.add_option("--total-insts", type="int", 
 		       default = 0, # by default "if options.total_insts" fails
 		 help="If defined, the simulation is going to keep running until the total number of instructions has been executed accross all threads")
-    parser.add_option("--mempolicy", default = "default", 
+    parser.add_option("--mempolicy", default = "frfcfs", 
 		 help="The memory controller scheduling policy to be used")
     parser.add_option("--ckpt-nickname", default=None, type="string",
 		 help="If defined, the simulator will use it as part of the checkpoint's name. Example (nickname set as memIntense): cpt.memIntense.20140693 instead of cpt.None.20140693")
