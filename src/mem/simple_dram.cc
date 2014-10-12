@@ -696,7 +696,7 @@ SimpleDRAM::recvTimingReq(PacketPtr pkt)
     /// @todo temporary hack to deal with memory corruption issues until
     /// 4-phase transactions are complete
     for (int x = 0; x < pendingDelete.size(); x++)
-        delete pendingDelete[x];
+    	delete pendingDelete[x];
     pendingDelete.clear();
 
     // This is where we enter from the outside world
@@ -832,7 +832,7 @@ SimpleDRAM::chooseNextWrite()
     // look. For example, with FCFS, this method does nothing
     assert(!writeQueue.empty());
 
-    if (writeQueue.size() == 1) {
+    if ((writeQueue.size() == 1) && (memSchedPolicy != Enums::parbs)) {
         DPRINTF(DRAMWR, "Single write request, nothing to do\n");
         return;
     }
@@ -939,7 +939,8 @@ SimpleDRAM::parbsNextRead() {
 	    DPRINTF(DRAM, "Row buffer hit\n");
 	    readQueue.erase(i);
 	    readQueue.push_front(dram_pkt);
-	    break;
+	    batchedInsts--;
+	    return;
 	} 
     }
 
@@ -981,7 +982,8 @@ SimpleDRAM::parbsNextWrite() {
             DPRINTF(DRAM, "Row buffer hit\n");
             writeQueue.erase(i);
             writeQueue.push_front(dram_pkt);
-            break;
+	    batchedInsts--;
+            return;
         }
     }
 
