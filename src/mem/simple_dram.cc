@@ -48,6 +48,9 @@
 #include "mem/simple_dram.hh"
 #include "sim/system.hh"
 
+#include <algorithm>
+#include <set>
+
 using namespace std;
 
 SimpleDRAM::SimpleDRAM(const SimpleDRAMParams* p) :
@@ -91,7 +94,17 @@ SimpleDRAM::SimpleDRAM(const SimpleDRAMParams* p) :
 
     //Prodromou
     batchedInsts = 0;
-    numOfThreads = p->procs; //HACK
+    numOfThreads = p->procs;
+/*
+    if (memSchedPolicy == Enums::tcm) {
+	//Initialize shadow rows
+	for (int i=0; i<banks.size(); i++) {
+	    for (int j=0; j<banks[i].size(); j++) {
+		banks[i][j].initShadowBanks(numOfThreads);
+	    }
+	}
+    }
+*/
     cout<<"Created simple dram with "<<numOfThreads<<" threads"<<endl;
     if (memSchedPolicy == Enums::fcfs) cout<<"Policy: FCFS"<<endl;
     if (memSchedPolicy == Enums::frfcfs) cout<<"Policy: FRFCFS"<<endl;
@@ -144,6 +157,28 @@ SimpleDRAM::init()
                 panic("Interleaving of %s doesn't match CoRaBaCh address map\n",
                       name());
         }
+    }
+
+    //Prodromou: Initialize TCM
+    if (memSchedPolicy == Enums::tcm) {
+	threadCluster = vector<bool>(numOfThreads, false);
+	threadNiceness = vector<int>(numOfThreads, 0);
+	shadowRBHitCount = vector<int>(numOfThreads, 0);
+	mpkiPerThread = vector<float>(numOfThreads, 0);
+	BLP = vector<int>(numOfThreads, 0);
+	reqPerThread = vector<int>(numOfThreads, 0);
+
+	sortedNiceness = vector<int>(numOfThreads, 0);
+	for (int i=0; i<numOfThreads; i++) sortedNiceness[i] = i;
+
+	shuffleState = numOfThreads-1;
+	lastSampleTime = 0;
+	samplingThreshold = 25000 * 500; //curTick() in increments of 500
+	samplesTaken = 0;
+	quantumThreshold = 1000000 * 500; //curTick() in increments of 500
+	lastQuantumTime = 0;
+	clusterThresh = 4.0 / numOfThreads; //Paper suggests 2/N - 6/N
+
     }
 }
 
@@ -355,6 +390,19 @@ SimpleDRAM::addToReadQueue(PacketPtr pkt, unsigned int pktCount)
 
             readQueue.push_back(dram_pkt);
 
+	    //Prodromou: If policy is TCM I need to store the packet in a cluster
+	    if (memSchedPolicy == Enums::tcm) {
+		int threadId = dram_pkt->thread;
+		if (threadId == -1) { //Just store it in the BW sensitive cluster
+		    bwSensRead.push_back(dram_pkt);
+		}
+		else {
+		    reqPerThread[threadId]++;
+		    if (threadCluster[threadId]) latSensRead.push_back(dram_pkt);
+		    else bwSensRead.push_back(dram_pkt);
+		}
+	    }
+
             // Update stats
             uint32_t bank_id = banksPerRank * dram_pkt->rank + dram_pkt->bank;
             assert(bank_id < ranksPerChannel * banksPerRank);
@@ -459,6 +507,24 @@ SimpleDRAM::processWriteEvent()
                 schedTime, tBURST, busBusyUntil);
 
         writeQueue.pop_front();
+/*
+	//Prodromou: Also remove from tcm cluster
+	int threadId = dram_pkt->thread;
+	DRAMPacket* temp = NULL;
+	if (memSchedPolicy == Enums::tcm) {
+	    if (threadId != -1) {
+		if (threadCluster[threadId]) {
+		    temp = latSensRead.front();
+		    latSensRead.pop_front();
+		}
+		else {
+		    temp = bwSensRead.front();
+		    bwSensRead.pop_front();
+		}
+		if (temp != dram_pkt) panic ("Something went wrong in removing from write cluster");
+	    }	
+	}
+*/
         delete dram_pkt;
 
         numWritesThisTime++;
@@ -598,6 +664,19 @@ SimpleDRAM::addToWriteQueue(PacketPtr pkt, unsigned int pktCount)
 
             writeQueue.push_back(dram_pkt);
 
+	    //Prodromou: If the policy is TCM store it in a cluster
+	    if (memSchedPolicy == Enums::tcm) {
+		int threadId = dram_pkt->thread;
+		if (threadId == -1) { //Just store it in BW sensitive
+		    bwSensWrite.push_back(dram_pkt);
+		}
+		else {
+		    reqPerThread[threadId]++;
+		    if (threadCluster[threadId]) latSensWrite.push_back(dram_pkt);
+		    else bwSensWrite.push_back(dram_pkt);
+		}
+	    }
+
             // Update stats
             uint32_t bank_id = banksPerRank * dram_pkt->rank + dram_pkt->bank;
             assert(bank_id < ranksPerChannel * banksPerRank);
@@ -695,8 +774,9 @@ SimpleDRAM::recvTimingReq(PacketPtr pkt)
 {
     /// @todo temporary hack to deal with memory corruption issues until
     /// 4-phase transactions are complete
-    for (int x = 0; x < pendingDelete.size(); x++)
+    for (int x = 0; x < pendingDelete.size(); x++) 
     	delete pendingDelete[x];
+    
     pendingDelete.clear();
 
     // This is where we enter from the outside world
@@ -834,6 +914,16 @@ SimpleDRAM::chooseNextWrite()
 
     if ((writeQueue.size() == 1) && (memSchedPolicy != Enums::parbs)) {
         DPRINTF(DRAMWR, "Single write request, nothing to do\n");
+	if (memSchedPolicy == Enums::tcm) {
+            int threadId = writeQueue[0]->thread;
+            if (threadCluster[threadId]) {
+                latSensWrite.pop_front();
+            }
+            else {
+                bwSensWrite.pop_front();
+            }
+        }
+
         return;
     }
 
@@ -858,6 +948,8 @@ SimpleDRAM::chooseNextWrite()
     } else if (memSchedPolicy == Enums::parbs) { 
 	//Prodromou: Try to implement parbs logic here to speed up simulations
 	parbsNextWrite();
+    } else if (memSchedPolicy == Enums::tcm) {
+	tcmNextWrite();
     }
     else
         panic("No scheduling policy chosen\n");
@@ -868,59 +960,71 @@ SimpleDRAM::chooseNextWrite()
 bool
 SimpleDRAM::chooseNextRead()
 {
-    // This method does the arbitration between read requests. The
-    // chosen packet is simply moved to the head of the queue. The
-    // other methods know that this is the place to look. For example,
-    // with FCFS, this method does nothing
+    // this method does the arbitration between read requests. the
+    // chosen packet is simply moved to the head of the queue. the
+    // other methods know that this is the place to look. for example,
+    // with fcfs, this method does nothing
     if (readQueue.empty()) {
-        DPRINTF(DRAM, "No read request to select\n");
+        DPRINTF(DRAM, "no read request to select\n");
         return false;
     }
 
-    // If there is only one request then there is nothing left to do
-    // Prodromou: For par-bs I need to follow the entire procedure 
+    // if there is only one request then there is nothing left to do
+    // prodromou: for par-bs i need to follow the entire procedure 
     // in order to take care of batching and book-keeping
     if ((readQueue.size() == 1) && (memSchedPolicy != Enums::parbs)){
+	//Prodromou: In case of TCM remove the packet from the cluster
+	if (memSchedPolicy == Enums::tcm) {
+	    int threadId = readQueue[0]->thread;
+	    if (threadCluster[threadId]) {
+		latSensRead.pop_front();
+	    }
+	    else {
+		bwSensRead.pop_front();
+	    }
+	}
         return true;
     }
 
     if (memSchedPolicy == Enums::fcfs) {
-        // Do nothing, since the request to serve is already the first
+        // do nothing, since the request to serve is already the first
         // one in the read queue
     } else if (memSchedPolicy == Enums::frfcfs) {
         for (auto i = readQueue.begin(); i != readQueue.end() ; ++i) {
             DRAMPacket* dram_pkt = *i;
             const Bank& bank = dram_pkt->bank_ref;
-            // Check if it is a row hit
-            if (bank.openRow == dram_pkt->row) { //FR part
-                DPRINTF(DRAM, "Row buffer hit\n");
+            // check if it is a row hit
+            if (bank.openRow == dram_pkt->row) { //fr part
+                DPRINTF(DRAM, "row buffer hit\n");
                 readQueue.erase(i);
                 readQueue.push_front(dram_pkt);
                 break;
-            } else { //FCFS part
+            } else { //fcfs part
                 ;
             }
         }
     } else if (memSchedPolicy == Enums::parbs) {
 	parbsNextRead();
+    } else if (memSchedPolicy == Enums::tcm) {
+	tcmNextRead();
     } else
-        panic("No scheduling policy chosen!\n");
+        panic("no scheduling policy chosen!\n");
 
-    DPRINTF(DRAM, "Selected next read request\n");
+	DPRINTF(DRAM, "selected next read request\n");
     return true;
 }
 
 void
 SimpleDRAM::parbsNextRead() {
-    //First create new batch if necessary
+    //first create new batch if necessary
     parbsCheckForBatch();
 
-    //The threads are ranked. We need to find a row hit or the oldest 
-    //request of the highest ranked thread. Requests are stored in 
+    //the threads are ranked. we need to find a row hit or the oldest 
+    //request of the highest ranked thread. requests are stored in 
     //chronological order so we don't need to worry about finding the 
     //oldest one
 
-    // This will store the request with the highest priority in case 
+    // this will store the request with the highest priority in case 
     // we don't find a row buffer hit
     auto prioPkt = readQueue.begin();
 
@@ -934,9 +1038,9 @@ SimpleDRAM::parbsNextRead() {
 	    prioPkt = i;
 	}
 
-	// Check if it is a row hit
-	if (bank.openRow == dram_pkt->row) { //FR part
-	    DPRINTF(DRAM, "Row buffer hit\n");
+	// check if it is a row hit
+	if (bank.openRow == dram_pkt->row) { //fr part
+	    DPRINTF(DRAM, "row buffer hit\n");
 	    readQueue.erase(i);
 	    readQueue.push_front(dram_pkt);
 	    batchedInsts--;
@@ -944,26 +1048,26 @@ SimpleDRAM::parbsNextRead() {
 	} 
     }
 
-    // No row buffer hit found. We are going with the PrioPkt option
+    // no row buffer hit found. we are going with the priopkt option
     DRAMPacket* prio_pkt = *prioPkt;
     readQueue.erase(prioPkt);
     readQueue.push_front(prio_pkt);
 
-    //Done. Decrement the number of batched instructions
+    //done. decrement the number of batched instructions
     batchedInsts--;
 }
 
 void 
 SimpleDRAM::parbsNextWrite() {
-    //First create new batch if necessary
+    //first create new batch if necessary
     parbsCheckForBatch();
 
-    //The threads are ranked. We need to find a row hit or the oldest
-    //request of the highest ranked thread. Requests are stored in
+    //the threads are ranked. we need to find a row hit or the oldest
+    //request of the highest ranked thread. requests are stored in
     //chronological order so we don't need to worry about finding the
     //oldest one
 
-    // This will store the request with the highest priority in case
+    // this will store the request with the highest priority in case
     // we don't find a row buffer hit
     auto prioPkt = writeQueue.begin();
 
@@ -977,9 +1081,9 @@ SimpleDRAM::parbsNextWrite() {
             prioPkt = i;
         }
 
-        // Check if it is a row hit
-        if (bank.openRow == dram_pkt->row) { //FR part
-            DPRINTF(DRAM, "Row buffer hit\n");
+        // check if it is a row hit
+        if (bank.openRow == dram_pkt->row) { //fr part
+            DPRINTF(DRAM, "row buffer hit\n");
             writeQueue.erase(i);
             writeQueue.push_front(dram_pkt);
 	    batchedInsts--;
@@ -987,12 +1091,12 @@ SimpleDRAM::parbsNextWrite() {
         }
     }
 
-    // No row buffer hit found. We are going with the PrioPkt option
+    // no row buffer hit found. we are going with the prioPkt option
     DRAMPacket* prio_pkt = *prioPkt;
     writeQueue.erase(prioPkt);
     writeQueue.push_front(prio_pkt);
 
-    //Done. Decrement the number of batched instructions
+    //done. decrement the number of batched instructions
     batchedInsts--;
 }
 
@@ -1001,7 +1105,7 @@ SimpleDRAM::parbsCheckForBatch() {
     if (batchedInsts > 0) return;
  
  
-    //Initialize book-keeping arrays
+    //initialize book-keeping arrays
     int totalBanks = ranksPerChannel * banksPerRank;
     int totalBatchedRequests[numOfThreads];
     int maxPerBank[numOfThreads];
@@ -1013,15 +1117,15 @@ SimpleDRAM::parbsCheckForBatch() {
 	for (int j=0; j<totalBanks; j++) perBankRequests[i][j] = 0;
     }
  
-    //Create batch and collect info
-    //All outstanding requests will be batched
+    //create batch and collect info
+    //all outstanding requests will be batched
     for (auto i = readQueue.begin(); i != readQueue.end() ; ++i) {
 	DRAMPacket* dram_pkt = *i;
 	dram_pkt->batched = true;
 	batchedInsts ++;
 
 	int bankId = dram_pkt->bank;
-	int threadId = dram_pkt->thread; // Some are -1
+	int threadId = dram_pkt->thread; // some are -1
 	if (threadId == -1) continue;
 
 	totalBatchedRequests[threadId]++;
@@ -1036,7 +1140,7 @@ SimpleDRAM::parbsCheckForBatch() {
 	batchedInsts ++;
 
 	int bankId = dram_pkt->bank;
-        int threadId = dram_pkt->thread; // Some are -1
+        int threadId = dram_pkt->thread; // some are -1
         if (threadId == -1) continue;
 
         totalBatchedRequests[threadId]++;
@@ -1045,12 +1149,12 @@ SimpleDRAM::parbsCheckForBatch() {
             maxPerBank[threadId] = perBankRequests[threadId][bankId];
         }
     }
-    //Batch created and info collected
+    //batch created and info collected
 
-    //Generate thread ranking
+    //generate thread ranking
     threadRank.clear();
     while (true) {
-	int min = 1000000; //Hack but should be fine
+	int min = 1000000; //hack but should be fine
 	int minId = -1;
 
 	for (int i=0; i<numOfThreads; i++) {
@@ -1059,14 +1163,14 @@ SimpleDRAM::parbsCheckForBatch() {
 		min = maxPerBank[i];
 		minId = i;
 	    }
-	    else if (maxPerBank[i] == min) { // We need the tie-breaker
+	    else if (maxPerBank[i] == min) { // we need the tie-breaker
 		if (totalBatchedRequests[i] < totalBatchedRequests[minId]) {
-		    minId = i; // No need to change min since they are equal
+		    minId = i; // no need to change min since they are equal
 		}
 	    }
 	}
     
-	if (minId != -1) { //Found min
+	if (minId != -1) { //found min
 	    threadRank.push_back(minId);
 	    maxPerBank[minId] = 0;
 	}
@@ -1074,7 +1178,358 @@ SimpleDRAM::parbsCheckForBatch() {
 	    break;
 	}
     }
-    //Done! 
+    //done! 
+}
+
+void
+SimpleDRAM::tcmNextWrite() {
+    int chosen;
+    DRAMPacket* dram_pkt;
+    bool foundInLat = false;
+
+    //Check if sampling is needed
+    if (curTick() - lastSampleTime >= samplingThreshold) {
+        tcmSampling();
+        tcmShuffle(); //Let's assume that the sampling threshold is also the shuffling threshold
+        lastSampleTime = curTick();
+    }
+
+    //Check if a quantum ended
+    if (curTick() - lastQuantumTime >= quantumThreshold) {
+        tcmQuantum();
+	lastQuantumTime = curTick();
+    }
+
+    //prioritize lat sensitive cluster
+    if (latSensWrite.size() != 0) {
+        chosen = tcmChooseFromLatCluster(false);
+        dram_pkt = latSensWrite[chosen];
+        foundInLat = true;
+    }
+    else { //if nothing in the lat sensitive, schedule something from bw
+        chosen = tcmChooseFromBwCluster(false); //True -> Looking for reads
+        dram_pkt = bwSensWrite[chosen];
+        foundInLat = false;
+    }
+
+    //Keep per-access statistics
+    tcmPerAccessStats(dram_pkt);
+
+    //find in writeQueue
+    auto i = std::find (writeQueue.begin(), writeQueue.end(), dram_pkt);
+    if (i != writeQueue.end()) {
+        //Found our next packet. Move to the front of the queue
+        writeQueue.erase(i);
+        writeQueue.push_front(dram_pkt);
+        //Delete from latSensRead/Write
+        if (foundInLat) latSensWrite.erase(latSensWrite.begin() + chosen);
+        else bwSensWrite.erase (bwSensWrite.begin() + chosen);
+    }
+    else {
+        panic("Error: transaction found in lat sensitive but not found in transaction Queue");
+    }
+}
+
+void 
+SimpleDRAM::tcmNextRead() {
+    int chosen;
+    DRAMPacket* dram_pkt;
+    bool foundInLat = false;
+
+    //Check if sampling is needed
+    if (curTick() - lastSampleTime >= samplingThreshold) {
+	tcmSampling();
+	tcmShuffle(); //Let's assume that the sampling threshold is also the shuffling threshold
+	lastSampleTime = curTick();
+    }
+
+    //Check if a quantum ended
+    if (curTick() - lastQuantumTime >= quantumThreshold) {
+	tcmQuantum();
+	lastQuantumTime = curTick();
+    }
+
+    //Select the actual request
+    //prioritize lat sensitive cluster
+    if (latSensRead.size() != 0) {
+	chosen = tcmChooseFromLatCluster(true); //True -> Looking for reads
+	dram_pkt = latSensRead[chosen];
+	foundInLat = true;
+    }
+    else { //if nothing in the lat sensitive, schedule something from bw
+	chosen = tcmChooseFromBwCluster(true); //True -> Looking for reads
+	dram_pkt = bwSensRead[chosen];
+	foundInLat = false;
+    }
+
+    //Keep per-access statistics
+    tcmPerAccessStats(dram_pkt);
+
+    //find in readQueue
+    auto i = std::find (readQueue.begin(), readQueue.end(), dram_pkt);
+    if (i != readQueue.end()) {
+	//Found our next packet. Move to the front of the queue
+	readQueue.erase(i);
+	readQueue.push_front(dram_pkt);
+	//Delete from latSensRead/Write
+	if (foundInLat) latSensRead.erase(latSensRead.begin() + chosen);
+	else bwSensRead.erase (bwSensRead.begin() + chosen);
+    }
+    else {
+	panic("Error: transaction found in lat sensitive but not found in transaction Queue");
+    }
+
+
+}
+
+void 
+SimpleDRAM::tcmPerAccessStats(DRAMPacket* dram_pkt) {
+    int threadId = dram_pkt->thread;
+    if (threadId == -1) return;
+
+    int row = dram_pkt->row;
+    Bank& bank = dram_pkt->bank_ref;
+
+    if (bank.shadowRow[threadId] == row) { //Shadow row buffer hit
+	shadowRBHitCount[threadId] ++;
+    }
+
+    //Update ghost bank status
+    bank.shadowRow[threadId] = row;
+    //Prodromou: I don't see any pre-charging activity in the code 
+    //so I guess I don't have to worry about closing ghost pages
+}
+
+void 
+SimpleDRAM::tcmSampling() {
+
+    samplesTaken++;
+
+    //update blp
+    //create a set per thread that holds the ids of the banks accessed
+    vector<set<int> > bankRequests (numOfThreads, set<int>());
+    //start with the read queue
+    for (auto i = readQueue.begin(); i != readQueue.end() ; ++i) {
+	DRAMPacket* dram_pkt = *i;
+	int bankId = dram_pkt->bank;
+        int threadId = dram_pkt->thread; // some are -1
+        if (threadId == -1) continue;
+
+	bankRequests[threadId].insert(bankId);
+    }
+    //repeat for the write queue
+    for (auto i = writeQueue.begin(); i != writeQueue.end() ; ++i) {
+        DRAMPacket* dram_pkt = *i;
+        int bankId = dram_pkt->bank;
+        int threadId = dram_pkt->thread; // some are -1
+        if (threadId == -1) continue;
+
+        bankRequests[threadId].insert(bankId);
+    }
+    for (int i=0; i<numOfThreads; i++) {
+	BLP[i] = bankRequests[i].size();
+    }
+    //blp updated
+}
+
+void 
+SimpleDRAM::tcmShuffle() {
+    //Make this better
+    if (shuffleState >= 0) {
+	int i= shuffleState; // READABILITY PURPOSES ONLY
+	//left shift (i, N-1)
+	//Create temp vector with the indices of interest
+	vector<int> temp (sortedNiceness.begin()+i, sortedNiceness.end());
+	//delete indices of interest from original vector
+	sortedNiceness.erase(sortedNiceness.begin()+i, sortedNiceness.end());
+	//shift temp to the left
+	int t1 = temp[0];
+	temp.erase(temp.begin());
+	temp.push_back(t1);
+	//Add temp back into the original vector
+	sortedNiceness.insert( sortedNiceness.end(), temp.begin(), temp.end() );
+    }
+    else if (shuffleState == -1) {
+	int i=numOfThreads-1;
+	//left shift (N-1, N-1)
+	//Create temp vector with the indices of interest
+	vector<int> temp (sortedNiceness.begin()+i, sortedNiceness.end());
+	//delete indices of interest from original vector
+	sortedNiceness.erase(sortedNiceness.begin()+i, sortedNiceness.end());
+	//shift temp to the left
+	int t1 = temp[0];
+	temp.erase(temp.begin());
+	temp.push_back(t1);
+	//Add temp back into the original vector
+	sortedNiceness.insert( sortedNiceness.end(), temp.begin(), temp.end() );
+    }
+    else {
+	int i = (shuffleState * (-1)) - 2; //ABS HACK
+	//right shift (i, N-1)
+	vector<int> temp (sortedNiceness.begin()+i, sortedNiceness.end());
+	//delete indices of interest from original vector
+	sortedNiceness.erase(sortedNiceness.begin()+i, sortedNiceness.end()-1);
+	//shift temp to the left
+	int t1 = temp.back();
+	temp.erase(temp.end()-1);
+	temp.insert(temp.begin(), t1);
+	//Add temp back into the original vector
+	sortedNiceness.insert( sortedNiceness.end(), temp.begin(), temp.end() );
+    }
+
+    shuffleState --;
+    if (shuffleState == (-1-numOfThreads)) shuffleState = numOfThreads-1; //NEG HACK
+}
+
+void 
+SimpleDRAM::tcmQuantum() {
+    //Calculate avg BW of all threads
+    float totalBW = 0;
+    for (int i=0; i<numOfThreads; i++) totalBW += BLP[i];
+    totalBW = totalBW / samplesTaken;
+
+    //Get MPKI per thread
+    for (int i=0; i<numOfThreads; i++) {
+	long long instCount;
+	instCount = ((system()->getThreadContext(i))->getCpuPtr())->getCommitedInsts(i);
+	mpkiPerThread[i] = (float)(reqPerThread[i]*1000) / instCount;
+    }
+
+    //Categorize Threads
+    float sumBW = 0;
+    for (int i=0; i<numOfThreads; i++) {
+	//Find smallest MPKI
+	int minMPKI = 100000; //HACK
+	int minMpkiIndex = -1;
+	for (int j=0; j<mpkiPerThread.size(); j++) {
+	    if (mpkiPerThread[j] < minMPKI) {
+		minMPKI = mpkiPerThread[j];
+		minMpkiIndex = j;
+	    }
+	}
+
+	// Reset the thread's mpki
+	mpkiPerThread[minMpkiIndex] = 10000; //HACK
+
+	sumBW = sumBW + ((float)(BLP[minMpkiIndex]) / samplesTaken);
+	if (sumBW <= clusterThresh * totalBW) {
+	    threadCluster[minMpkiIndex] = true;
+	}
+	else {
+	    break;
+	}
+    }
+
+    //Calculate thread niceless
+    for (int i=0; i<numOfThreads; i++) {
+	int Bi = 1;
+	int Ri = 1;
+	for (int j=0; j<numOfThreads; j++) {
+	    //Only compare against threads in the BW sensitive cluster
+	    if ( ! threadCluster[j]) {
+		if (BLP[j] > BLP[i]) Bi++;
+		if (shadowRBHitCount[j] > shadowRBHitCount[i]) Ri++;
+	    }
+	}
+	threadNiceness[i] = Bi - Ri;
+    }
+
+    //Sort threads based on niceness
+    while(true) {
+	if (threadNiceness.size() == 0) break;
+	int minIndex = -1;
+	int min_temp = 0;
+	for (int i=0; i<threadNiceness.size(); i++) {
+	    if ((threadNiceness[i] < min_temp) || (i == 0)) {
+		min_temp = threadNiceness[i];
+		minIndex = i;
+	    }
+	}
+	sortedNiceness.push_back(threadNiceness[minIndex]);
+	threadNiceness.erase(threadNiceness.begin() + minIndex);
+    }
+
+    //Reset stats counters
+    for (int i=0; i<numOfThreads; i++) {
+	shadowRBHitCount[i] = 0;
+	BLP[i] = 0;
+    }
+    samplesTaken = 0;
+}
+
+int 
+SimpleDRAM::tcmChooseFromBwCluster(bool isRead) {
+    int chosenIndex = 0;
+
+    //Choose which queue we'll work on
+    std::deque<DRAMPacket*> queue;
+    if (isRead) queue = bwSensRead;
+    else queue = bwSensWrite;
+
+    // i=1 is not a typo. i=0 is already chosen
+    for (int i=1; i<queue.size(); i++) {
+	int threadId = queue[i]->thread;
+	if (threadId == queue[chosenIndex]->thread) { //Same thread. Tie breaker
+	    //Row Buffer Hit
+	    Bank& bank = queue[chosenIndex]->bank_ref;
+	    int row = queue[chosenIndex]->row;
+	    Bank& bank2 = queue[i]->bank_ref;
+	    int row2 = queue[i]->row;
+	    if (bank.openRow == row) ; //Nothing to do here
+	    else if (bank2.openRow == row2) chosenIndex = i;
+	    else ; //Age tie breaker. Chronologically sorted queues...
+	}
+	else { //Different threads. Check their priorities
+	    vector<int>::iterator chosenIt, it2;
+	    chosenIt = std::find (sortedNiceness.begin(), sortedNiceness.end(), queue[chosenIndex]->thread);
+	    it2 = std::find (sortedNiceness.begin(), sortedNiceness.end(), threadId);
+	    if (it2 == sortedNiceness.end()) ; // No match found. Do nothing
+	    else if (it2 > chosenIt) { //thread has higher priority
+		chosenIndex = i;
+	    }
+	}
+    }
+    return chosenIndex;
+}
+
+int
+SimpleDRAM::tcmChooseFromLatCluster(bool isRead) {
+    
+    int chosenIndex = -1;
+
+    //Choose which queue we'll work on
+    std::deque<DRAMPacket*> queue;
+    if (isRead) queue = latSensRead;
+    else queue = latSensWrite;
+   
+    //Lower MPKI
+    float minMpki = 0;
+    for (auto i = queue.begin(); i<queue.end(); i++) {
+	DRAMPacket* dram_pkt = *i;
+	int threadId = dram_pkt->thread;
+	if ((mpkiPerThread[threadId] < minMpki) || (i == queue.begin())) {
+            minMpki = mpkiPerThread[threadId];
+            chosenIndex = i - queue.begin(); //Returns the index
+        }
+	else if (mpkiPerThread[threadId] == minMpki) { //Tie breaker: RB Hit
+
+	    Bank& bank = queue[chosenIndex]->bank_ref;
+	    int row = queue[chosenIndex]->row;
+
+	    Bank& bank2 = dram_pkt->bank_ref;
+	    int row2 = dram_pkt->row;
+
+	    if (bank.openRow == row) ; //No need to do anything else
+	    else if (bank2.openRow == row2) chosenIndex = i - queue.begin();
+	    else { //No Row hits found. Tie breaker is age
+		//No need to do anything since the already-selected 
+		//index is also first in time
+		;
+	    }
+	}
+    }
+
+    return chosenIndex;
 }
 
 void
@@ -1325,6 +1780,24 @@ SimpleDRAM::moveToRespQ()
     // Remove from read queue
     DRAMPacket* dram_pkt = readQueue.front();
     readQueue.pop_front();
+/*
+    //Prodromou: Remove from the cluster queue as well
+    int threadId = dram_pkt->thread;
+    DRAMPacket* temp = NULL;
+    if (memSchedPolicy == Enums::tcm) {
+	if (threadId != -1) {
+	    if (threadCluster[threadId]) {
+		temp = latSensRead.front();
+		latSensRead.pop_front();
+	    }
+	    else {
+		temp = bwSensRead.front();
+		bwSensRead.pop_front();
+	    }
+	    if (temp != dram_pkt) panic ("Something went wrong in removing the packet from the cluster");
+	}
+    }
+*/
 
     // sanity check
     assert(dram_pkt->size <= burstSize);

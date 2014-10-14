@@ -50,6 +50,8 @@
 #define __MEM_SIMPLE_DRAM_HH__
 
 #include <deque>
+#include <set>
+#include <algorithm>
 
 #include "base/statistics.hh"
 #include "enums/AddrMap.hh"
@@ -59,6 +61,11 @@
 #include "mem/qport.hh"
 #include "params/SimpleDRAM.hh"
 #include "sim/eventq.hh"
+
+#include "cpu/o3/thread_context.hh"
+#include "cpu/o3/cpu.hh"
+class ThreadContext;
+class FullO3CPU<O3CPUImpl>;
 
 /**
  * The simple DRAM is a basic single-channel memory controller aiming
@@ -155,9 +162,18 @@ class SimpleDRAM : public AbstractMemory
 
         uint32_t bytesAccessed;
 
+	//Prodromou: Shadow banks needed by TCM
+	std::vector<uint32_t> shadowRow;
+/*
+	void initShadowBanks(int num_of_threads) {
+	    shadowRow = std::vector<uint32_t>(num_of_threads, -1);
+	}
+*/
         Bank() :
             openRow(INVALID_ROW), freeAt(0), tRASDoneAt(0), bytesAccessed(0)
-        { }
+        { 
+	    shadowRow = std::vector<uint32_t>(4, -1); //HACK
+	}
     };
 
     /**
@@ -235,6 +251,7 @@ class SimpleDRAM : public AbstractMemory
               pkt(_pkt), rank(_rank), bank(_bank), row(_row), addr(_addr),
               size(_size), burstHelper(NULL), bank_ref(_bank_ref), batched(false)
         { 
+	    //Prodromou: Needed for scheduling
 	    thread = _pkt->req->hasContextId() ? _pkt->req->contextId() : -1;
 	}
 
@@ -420,6 +437,39 @@ class SimpleDRAM : public AbstractMemory
     void parbsNextWrite();
     void parbsNextRead();
     void parbsCheckForBatch();
+
+    //Prodromou: All these are needed for TCM
+    std::deque<DRAMPacket*> latSensRead;
+    std::deque<DRAMPacket*> latSensWrite;
+    std::deque<DRAMPacket*> bwSensRead;
+    std::deque<DRAMPacket*> bwSensWrite;
+
+    std::vector<int> shadowRBHitCount;
+    std::vector<bool> threadCluster; //True -> Thread belongs in Lat-Sensitive cluster
+    std::vector<int> BLP;
+    std::vector<int> reqPerThread;
+    
+    std::vector<int> threadNiceness;
+    std::vector<int> sortedNiceness;
+
+    std::vector<float> mpkiPerThread;
+    
+    long samplesTaken;
+    int lastQuantumTime, quantumThreshold;
+    int lastSampleTime, samplingThreshold;
+    int shuffleState;
+    float clusterThresh;
+    
+
+    void tcmNextRead();
+    void tcmNextWrite();
+    void tcmPerAccessStats(DRAMPacket* dram_pkt);
+    void tcmSampling();
+    void tcmShuffle();
+    void tcmQuantum();
+    int tcmChooseFromBwCluster(bool isRead);
+    int tcmChooseFromLatCluster(bool isRead);
+
 
     /**
      * The controller's main read and write queues
