@@ -398,7 +398,9 @@ SimpleDRAM::addToReadQueue(PacketPtr pkt, unsigned int pktCount)
 		}
 		else {
 		    reqPerThread[threadId]++;
-		    if (threadCluster[threadId]) latSensRead.push_back(dram_pkt);
+		    if (threadCluster[threadId]) {
+			latSensRead.push_back(dram_pkt);
+		    }
 		    else bwSensRead.push_back(dram_pkt);
 		}
 	    }
@@ -916,7 +918,10 @@ SimpleDRAM::chooseNextWrite()
         DPRINTF(DRAMWR, "Single write request, nothing to do\n");
 	if (memSchedPolicy == Enums::tcm) {
             int threadId = writeQueue[0]->thread;
-            if (threadCluster[threadId]) {
+            if (threadId == -1) {
+		bwSensWrite.pop_front();
+	    }
+	    else if (threadCluster[threadId]) {
                 latSensWrite.pop_front();
             }
             else {
@@ -976,7 +981,10 @@ SimpleDRAM::chooseNextRead()
 	//Prodromou: In case of TCM remove the packet from the cluster
 	if (memSchedPolicy == Enums::tcm) {
 	    int threadId = readQueue[0]->thread;
-	    if (threadCluster[threadId]) {
+	    if (threadId == -1) {
+		bwSensRead.pop_front();
+	    }
+	    else if (threadCluster[threadId]) {
 		latSensRead.pop_front();
 	    }
 	    else {
@@ -1272,7 +1280,9 @@ SimpleDRAM::tcmNextRead() {
 	readQueue.erase(i);
 	readQueue.push_front(dram_pkt);
 	//Delete from latSensRead/Write
-	if (foundInLat) latSensRead.erase(latSensRead.begin() + chosen);
+	if (foundInLat) {
+		latSensRead.erase(latSensRead.begin() + chosen);
+	}
 	else bwSensRead.erase (bwSensRead.begin() + chosen);
     }
     else {
@@ -1447,6 +1457,43 @@ SimpleDRAM::tcmQuantum() {
 	}
 	sortedNiceness.push_back(threadNiceness[minIndex]);
 	threadNiceness.erase(threadNiceness.begin() + minIndex);
+    }
+
+    //Prodromou: I need to clear the Clusters and re-input all the 
+    //requests according to the new ranking
+ 
+    latSensRead.clear();
+    bwSensRead.clear();
+    latSensWrite.clear();
+    bwSensWrite.clear();
+
+    for (auto i = readQueue.begin(); i!= readQueue.end(); ++i) { 
+	DRAMPacket* dram_pkt = *i;
+	int threadId = dram_pkt->thread;
+	if (threadId == -1) { //Just store it in the BW sensitive cluster
+	    bwSensRead.push_back(dram_pkt);
+	}
+	else {
+	    reqPerThread[threadId]++;
+	    if (threadCluster[threadId]) {
+		latSensRead.push_back(dram_pkt);
+	    }
+	    else bwSensRead.push_back(dram_pkt);
+	} 
+    }
+    for (auto i = writeQueue.begin(); i!= writeQueue.end(); ++i) { 
+	DRAMPacket* dram_pkt = *i;
+	int threadId = dram_pkt->thread;
+	if (threadId == -1) { //Just store it in the BW sensitive cluster
+	    bwSensWrite.push_back(dram_pkt);
+	}
+	else {
+	    reqPerThread[threadId]++;
+	    if (threadCluster[threadId]) {
+		latSensWrite.push_back(dram_pkt);
+	    }
+	    else bwSensWrite.push_back(dram_pkt);
+	} 
     }
 
     //Reset stats counters
