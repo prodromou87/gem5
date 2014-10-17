@@ -455,10 +455,10 @@ class SimpleDRAM : public AbstractMemory
     std::vector<float> mpkiPerThread;
     
     long samplesTaken;
-    int lastQuantumTime, quantumThreshold;
-    int lastSampleTime, samplingThreshold;
+    long long lastQuantumTime, quantumThreshold;
+    long long lastSampleTime, samplingThreshold;
     int shuffleState;
-    float clusterThresh;
+    double clusterThresh;
     
 
     void tcmNextRead();

@@ -173,9 +173,11 @@ SimpleDRAM::init()
 
 	shuffleState = numOfThreads-1;
 	lastSampleTime = 0;
-	samplingThreshold = 25000 * 500; //curTick() in increments of 500
+	samplingThreshold = 2500000 * 500; //curTick() in increments of 500
 	samplesTaken = 0;
-	quantumThreshold = 1000000 * 500; //curTick() in increments of 500
+	//LL at the end converts the number to long. 
+	//Otherwise compilation fails.
+	quantumThreshold = 10000000LL * 500LL; //curTick() in increments of 500
 	lastQuantumTime = 0;
 	clusterThresh = 4.0 / numOfThreads; //Paper suggests 2/N - 6/N
 
@@ -1461,7 +1463,15 @@ SimpleDRAM::tcmQuantum() {
 
     //Prodromou: I need to clear the Clusters and re-input all the 
     //requests according to the new ranking
+
+    //Some metricks to verify correct reassignment
+    int readSize = latSensRead.size() + bwSensRead.size();
+    int writeSize = latSensWrite.size() + bwSensWrite.size();
  
+    if ((readSize != readQueue.size()) || (writeSize != writeQueue.size())) {
+	panic ("Queue size mismatch at the beginning of tcmQuantum ");
+    }
+
     latSensRead.clear();
     bwSensRead.clear();
     latSensWrite.clear();
@@ -1474,7 +1484,6 @@ SimpleDRAM::tcmQuantum() {
 	    bwSensRead.push_back(dram_pkt);
 	}
 	else {
-	    reqPerThread[threadId]++;
 	    if (threadCluster[threadId]) {
 		latSensRead.push_back(dram_pkt);
 	    }
@@ -1488,12 +1497,18 @@ SimpleDRAM::tcmQuantum() {
 	    bwSensWrite.push_back(dram_pkt);
 	}
 	else {
-	    reqPerThread[threadId]++;
 	    if (threadCluster[threadId]) {
 		latSensWrite.push_back(dram_pkt);
 	    }
 	    else bwSensWrite.push_back(dram_pkt);
 	} 
+    }
+
+    readSize = latSensRead.size() + bwSensRead.size();
+    writeSize = latSensWrite.size() + bwSensWrite.size();
+
+    if ((readSize != readQueue.size()) || (writeSize != writeQueue.size())) {
+        panic ("Queue size mismatch at the end of tcmQuantum ");
     }
 
     //Reset stats counters
