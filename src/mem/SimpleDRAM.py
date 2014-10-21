@@ -337,3 +337,7 @@ class LPDDR3_1600_x32(SimpleDRAM):
     # Irrespective of size, tFAW is 50 ns
     tXAW = '50ns'
     activation_limit = 4
+
+#Prodromou: Create classes that derive from DDR3_1600_x64 and differ only on tCL
+class Custom_tCL_Controller(DDR3_1600_x64):
+    tCL = '13.75ns'
