@@ -114,8 +114,8 @@ def addCommonOptions(parser):
 		 help="If defined, the simulator will use it as part of the checkpoint's name. Example (nickname set as memIntense): cpt.memIntense.20140693 instead of cpt.None.20140693")
     parser.add_option("--mutlu", action="store_true",
                  help="Creates the mem hierarchy used in Mutlu's Par-BS paper")
-    parser.add_option("--tcl", default="13.75ns",
-		 help="Sets the MC's tCL. Only used custom_tcl MC class")
+    parser.add_option("--per-access-delay", default="10ns",
+		 help="Sets the MC's static frontend delay. Only used custom_tcl MC class")
 
     #PRODROMOU
     parser.add_option("--fastmem", action="store_true")

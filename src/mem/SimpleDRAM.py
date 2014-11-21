@@ -340,4 +340,4 @@ class LPDDR3_1600_x32(SimpleDRAM):
 
 #Prodromou: Create classes that derive from DDR3_1600_x64 and differ only on tCL
 class Custom_tCL_Controller(DDR3_1600_x64):
-    tCL = '13.75ns'
+    static_frontend_latency = "10ns"
