@@ -44,7 +44,7 @@ from AbstractMemory import *
 
 # Enum for memory scheduling algorithms, currently First-Come
 # First-Served and a First-Row Hit then First-Come First-Served
-class MemSched(Enum): vals = ['fcfs', 'frfcfs']
+class MemSched(Enum): vals = ['fcfs', 'frfcfs', 'parbs', 'tcm']
 
 # Enum for the address mapping. With Ra, Co, Ba and Ch denoting rank,
 # column, bank and channel, respectively, and going from MSB to LSB.
@@ -63,6 +63,10 @@ class PageManage(Enum): vals = ['open', 'close']
 class SimpleDRAM(AbstractMemory):
     type = 'SimpleDRAM'
     cxx_header = "mem/simple_dram.hh"
+
+    # Prodromou: Storing the number of CPUs/threads. Needed by some 
+    # scheduling policies
+    procs = Param.Int (1, "Number of Processors/Threads")
 
     # single-ported on the system interface side, instantiate with a
     # bus in front of the controller for multiple ports
@@ -333,3 +337,7 @@ class LPDDR3_1600_x32(SimpleDRAM):
     # Irrespective of size, tFAW is 50 ns
     tXAW = '50ns'
     activation_limit = 4
+
+#Prodromou: Create classes that derive from DDR3_1600_x64 and differ only on tCL
+class Custom_tCL_Controller(DDR3_1600_x64):
+    static_frontend_latency = "10ns"

@@ -457,4 +457,16 @@ if options.dump_interval:
 
 m5.disableAllListeners()
 root = Root(full_system = False, system = system)
+
+#Prodromou: Try to modify the tCL value of the controller
+#for ctrl in system.mem_ctrls:
+#    print "Hello %l" % (ctrl.tCL.getValue()) 
+
 Simulation.run(options, root, system, FutureClass)
+
+
+
+
+
+
+

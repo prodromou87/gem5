@@ -158,7 +158,6 @@ def findCptDir(options, cptdir, testsys):
 
         cpt_starttick = int(cpts[cpt_num - 1])
         checkpoint_dir = joinpath(cptdir, "cpt.%s" % cpts[cpt_num - 1])
-
     return cpt_starttick, checkpoint_dir
 
 def scriptCheckpoints(options, maxtick, cptdir):

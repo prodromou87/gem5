@@ -73,7 +73,7 @@ def addCommonOptions(parser):
                       help = """Top-level clock for blocks running at system
                       speed""")
     parser.add_option("--cpu-clock", action="store", type="string",
-                      default='2GHz',
+                      default='1GHz',
                       help="Clock for blocks running at CPU speed")
     parser.add_option("--smt", action="store_true", default=False,
                       help = """
@@ -108,7 +108,7 @@ def addCommonOptions(parser):
     parser.add_option("--total-insts", type="int", 
 		       default = 0, # by default "if options.total_insts" fails
 		 help="If defined, the simulation is going to keep running until the total number of instructions has been executed accross all threads")
-    parser.add_option("--mempolicy", default = "default", 
+    parser.add_option("--mempolicy", default = "frfcfs", 
 		 help="The memory controller scheduling policy to be used")
     parser.add_option("--ckpt-nickname", default=None, type="string",
 		 help="If defined, the simulator will use it as part of the checkpoint's name. Example (nickname set as memIntense): cpt.memIntense.20140693 instead of cpt.None.20140693")
@@ -116,6 +116,8 @@ def addCommonOptions(parser):
                  help="Creates the mem hierarchy used in Mutlu's Par-BS paper")
     parser.add_option("-d", "--dump-interval", default=0, type="int",
 		 help="Dumps statistics every defined interval")
+    parser.add_option("--per-access-delay", default="10ns",
+		 help="Sets the MC's static frontend delay. Only used custom_tcl MC class")
 
     #PRODROMOU
     parser.add_option("--fastmem", action="store_true")
