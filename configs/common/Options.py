@@ -114,6 +114,8 @@ def addCommonOptions(parser):
 		 help="If defined, the simulator will use it as part of the checkpoint's name. Example (nickname set as memIntense): cpt.memIntense.20140693 instead of cpt.None.20140693")
     parser.add_option("--mutlu", action="store_true",
                  help="Creates the mem hierarchy used in Mutlu's Par-BS paper")
+    parser.add_option("-d", "--dump-interval", default=0, type="int",
+		 help="Dumps statistics every defined interval")
 
     #PRODROMOU
     parser.add_option("--fastmem", action="store_true")

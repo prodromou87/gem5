@@ -66,6 +66,9 @@ from cpu2000 import *
 import SPEC2k6_train
 import SPEC2k6_ref
 
+#Prodromou: For periodical stat dumping
+from m5.internal.stats import periodicStatDump as statDump
+
 def get_processes(options):
     """Interprets provided options and returns a list of processes"""
 
@@ -448,6 +451,9 @@ else:
     else:
 	CacheConfig.config_cache(options, system)
     MemConfig.config_mem(options, system)
+
+if options.dump_interval:
+    statDump (options.dump_interval)
 
 m5.disableAllListeners()
 root = Root(full_system = False, system = system)
