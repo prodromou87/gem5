@@ -619,6 +619,13 @@ class SimpleDRAM : public AbstractMemory
     Stats::Formula writeRowHitRate;
     Stats::Formula avgGap;
 
+    // Prodromou: Create formulas for the number of microthreads (N) 
+    // and the thinking time (Z)
+    Stats::Formula Lamda;
+    Stats::Formula Mi;
+    Stats::Formula thinkingTime;
+    Stats::Formula microThreads;
+
     /** @todo this is a temporary workaround until the 4-phase code is
      * committed. upstream caches needs this packet until true is returned, so
      * hold onto it for deletion until a subsequent call

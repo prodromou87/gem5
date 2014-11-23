@@ -2163,6 +2163,38 @@ SimpleDRAM::regStats()
         .precision(2);
 
     avgGap = totGap / (readReqs + writeReqs);
+
+    Lamda
+	.name(name() + ".Lamda")
+	.desc("The observed arrival ratio at the MC")
+	.precision(2);
+
+    //Prodromou: HACK: Hardcoded value
+    Lamda = (readReqs + writeReqs) / (simTicks / 1000);
+
+    Mi
+	.name(name() + ".Mi")
+	.desc("The observes serviced rate at the MC")
+	.precision(2);
+
+    //Prodromou: HACK: Hardcoded value
+    Mi = (readReqs + writeReqs - constant(readQueue.size()) - constant(respQueue.size()) - constant(writeQueue.size())) / (simTicks / 1000);
+
+    thinkingTime
+	.name(name() + ".thinkingTime")
+	.desc("Thinking time of clients when the MC is modeled as a closed Queuing network")
+	.precision(2);
+    
+    //Prodromou: Can't use the word throughput (very common). Using Mi
+    //Prodromou: / 1000 to get ns. HACK: Hardcoded value
+    thinkingTime = ((avgRdQLen + avgWrQLen) - (Lamda * (avgMemAccLat / 1000))) / (Lamda + Mi);
+
+    microThreads
+	.name(name() + ".microThreads")
+	.desc("The estimated number of microThreads")
+	.precision (2);
+
+    microThreads = (avgRdQLen + avgWrQLen) - (Mi * thinkingTime);
 }
 
 void

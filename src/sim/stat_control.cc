@@ -266,6 +266,18 @@ periodicStatDump(Tick period)
      * period that is less than the current tick, then we shift the first dump
      * by curTick. This ensures that we do not schedule the event is the past.
      */
+
+    //Prodromou: I need to modify this so it doesn't reset the 
+    //           stats at every dump
+    if (period != 0) {
+        // Schedule the event
+        if (period >= curTick()) {
+            schedStatEvent(true, false, (Tick)period, (Tick)period);
+        } else {
+            schedStatEvent(true, false, (Tick)period + curTick(), (Tick)period);
+        }
+    }
+/*
     if (period != 0) {
         // Schedule the event
         if (period >= curTick()) {
@@ -274,6 +286,7 @@ periodicStatDump(Tick period)
             schedStatEvent(true, true, (Tick)period + curTick(), (Tick)period);
         }
     }
+*/
 }
 
 void
