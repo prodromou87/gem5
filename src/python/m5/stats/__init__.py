@@ -95,6 +95,8 @@ lastDump = 0
 def dump():
     '''Dump all statistics data to the registered outputs'''
 
+    from m5 import options
+
     curTick = m5.curTick()
 
     global lastDump
@@ -107,12 +109,34 @@ def dump():
 
     prepare()
 
-    for output in outputList:
-        if output.valid():
-            output.begin()
-            for stat in stats_list:
-                output.visit(stat)
-            output.end()
+    # Prodromou: Based on a M5 flag, filter stats or not
+    if options.use_stat_flags:
+
+	stat_print_flags = [
+			    "system.switch_cpus.commit.committedInsts",
+			    "readReqs",
+			    "writeReqs",
+			    "system.mem_ctrls.avgQLat",
+			    "microThreads",
+			    "thinkingTime",
+			    "readRowHitRate"
+			    ]
+
+	for output in outputList:
+	    if output.valid():
+		output.begin()
+		for stat in stats_list:
+		    for flag in stat_print_flags:
+			if flag in stat.name:
+			    output.visit(stat)
+		output.end()
+    else:
+	for output in outputList:
+            if output.valid():
+                output.begin()
+                for stat in stats_list:
+		    output.visit(stat)
+                output.end()
 
 def reset():
     '''Reset all statistics to the base state'''
