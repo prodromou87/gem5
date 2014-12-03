@@ -117,6 +117,11 @@ def parse_options():
     option("--list-sim-objects", action='store_true', default=False,
         help="List all built-in SimObjects, their params and default values")
 
+    # Prodromou: My options
+    group("Prodromou Helper Options")
+    option("--use-stat-flags", action="store_true", default=False,
+        help="If enabled, only selected stats will be printed. See the code in src/python/m5/stats/__init__.py:113")
+
     # load the options.py config file to allow people to set their own
     # default options
     options_file = config.get('options.py')
