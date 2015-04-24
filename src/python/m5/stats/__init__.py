@@ -113,7 +113,7 @@ def dump():
     if options.use_stat_flags:
 
 	stat_print_flags = [
-			    "system.switch_cpus.commit.committedInsts",
+			    "committedInsts",
 			    "readReqs",
 			    "writeReqs",
 			    "system.mem_ctrls.avgQLat",
