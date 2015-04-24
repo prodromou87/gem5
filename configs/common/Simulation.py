@@ -179,8 +179,11 @@ def scriptCheckpoints(options, maxtick, cptdir):
             exit_cause = exit_event.getCause()
 
         if exit_cause == "a thread reached the max instruction count":
-            m5.checkpoint(joinpath(cptdir, "cpt.%s.%d" % \
-                    (options.bench, checkpoint_inst)))
+            #m5.checkpoint(joinpath(cptdir, "cpt.%s.%d" % \
+            #        (options.bench, checkpoint_inst)))
+	    m5.checkpoint(joinpath(cptdir, "cpt.%s.%d" % \
+                    (options.ckpt_nickname, checkpoint_inst)))
+
             print "Checkpoint written."
 
     else:
