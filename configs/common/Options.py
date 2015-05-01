@@ -116,8 +116,11 @@ def addCommonOptions(parser):
                  help="Creates the mem hierarchy used in Mutlu's Par-BS paper")
     parser.add_option("-d", "--dump-interval", default=0, type="int",
 		 help="Dumps statistics every defined interval")
-    parser.add_option("--per-access-delay", default="10ns",
-		 help="Sets the MC's static frontend delay. Only used custom_tcl MC class")
+    parser.add_option("--per-access-slowdown", default="0ns",
+		 help="Sets the MC's static delay per access. Only used custom_tcl MC class")
+    parser.add_option("--slowdown-accesses", default=False, 
+		help="Enables per access slowdown. Amount of delay passed with --per-access-slowdown.")
+
 
     #PRODROMOU
     parser.add_option("--fastmem", action="store_true")

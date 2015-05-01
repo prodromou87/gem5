@@ -141,6 +141,10 @@ class SimpleDRAM(AbstractMemory):
     tXAW = Param.Latency("X activation window")
     activation_limit = Param.Unsigned("Max number of activates in window")
 
+    # Prodromou: Adding flag to signal added latency per memory access
+    slowdown_accesses = Param.Bool(False, "Add extra delay to all memory accesses. The amount of delay is passed by the per_access_slowdown parameter")
+    per_access_slowdown = Param.Latency('0ns', "The amount of slowdown per access. Only works when slowdown_access is set")
+
     # Currently rolled into other params
     ######################################################################
 

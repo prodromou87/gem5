@@ -566,6 +566,10 @@ class SimpleDRAM : public AbstractMemory
     Tick prevArrival;
     int numReqs;
 
+    // Prodromou: To simulate slower memories
+    bool slowdownAccesses;
+    const Tick perAccessSlowdown;
+
     // All statistics that the model needs to capture
     Stats::Scalar readReqs;
     Stats::Scalar writeReqs;

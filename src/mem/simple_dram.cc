@@ -79,7 +79,10 @@ SimpleDRAM::SimpleDRAM(const SimpleDRAMParams* p) :
     frontendLatency(p->static_frontend_latency),
     backendLatency(p->static_backend_latency),
     busBusyUntil(0), writeStartTime(0),
-    prevArrival(0), numReqs(0)
+    prevArrival(0), numReqs(0),
+    // Prodromou
+    slowdownAccesses(p->slowdown_accesses),
+    perAccessSlowdown(p->per_access_slowdown)
 {
     // create the bank states based on the dimensions of the ranks and
     // banks
@@ -1785,6 +1788,9 @@ SimpleDRAM::doDRAMAccess(DRAMPacket* dram_pkt)
 
     // Update request parameters
     dram_pkt->readyTime = curTick() + addDelay + accessLat + tBURST;
+
+    // Prodromou: Slow down accesses when flag is set
+    if (slowdownAccesses) dram_pkt->readyTime += perAccessSlowdown;
 
 
     DPRINTF(DRAM, "Req %lld: curtick is %lld accessLat is %d " \

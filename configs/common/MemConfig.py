@@ -173,8 +173,9 @@ def config_mem(options, system):
 		ctrl.mem_sched_policy = options.mempolicy
 		ctrl.procs = options.num_cpus
 		if issubclass(cls, m5.objects.Custom_tCL_Controller):
-		    ctrl.static_frontend_latency = options.per_access_delay
-		    print "Per Access Delay: " + options.per_access_delay
+		    ctrl.slowdown_accesses = options.slowdown_accesses
+		    ctrl.per_access_slowdown = options.per_access_slowdown
+		    print "Per Access Slowdown: " + options.per_access_slowdown
 
                 # If the channel bits are appearing after the column
                 # bits, we need to add the appropriate number of bits
