@@ -67,6 +67,10 @@
 class ThreadContext;
 class FullO3CPU<O3CPUImpl>;
 
+//Prodromou: For LookupTable class
+#include <vector>
+using namespace std;
+
 /**
  * The simple DRAM is a basic single-channel memory controller aiming
  * to mimic a high-level DRAM controller and the most important timing
@@ -90,6 +94,49 @@ class SimpleDRAM : public AbstractMemory
 {
 
   private:
+
+    //Prodromou: Create the lookup table class, indexed by Mem-RTT, 
+    //Prodromou: numOfReads and avgQueueLength
+    class LookupTable {
+	private:
+	    class LookupTableEntry {
+		public:
+		    float throughput;
+		    float Qlen;
+		    bool valid;
+
+		    LookupTableEntry() {
+			valid = false;
+			throughput = -1;
+			Qlen = 0;
+		    }
+	    };
+
+	    float Rtt;
+
+	    //The actual lookup table
+	    // N * Z * entry ( * Rtt?)
+	    vector<vector<LookupTableEntry> > table; //Addressed by N,Z
+
+	    int dimension_limit;
+
+	public:
+	    LookupTable(int dim_limit, float rtt);
+
+	    //Used to map float numbers to vector indices
+	    float getNStep();
+	    float getZStep();
+
+	    void exactMVA(int N_dim, int Z_dim);
+
+	    void printTable();
+
+	    pair<int,int> searchFor( float X, float Q);
+
+	    void printEntry (int N, int Z);
+	};
+
+    LookupTable *mthreadsLookupTable;
 
     // For now, make use of a queued slave port to avoid dealing with
     // flow control for the responses being sent back
@@ -470,7 +517,19 @@ class SimpleDRAM : public AbstractMemory
     int tcmChooseFromBwCluster(bool isRead);
     int tcmChooseFromLatCluster(bool isRead);
 
+    //Prodromou: mthreads functions
+    void mthreadsNextRead();
+    void mthreadsNextWrite();
 
+    //Prodromou: Structures needed for mThreads Scheduler
+    std::vector<int> mthreadsReqsServiced; //Also RTT
+    
+    //Prodromou: I'll make this a Stat so I don't have to 
+    //worry about keeping time
+	//std::vector<int> mthreadsAvgMemAccTimePerThread; //RTT
+	//std::vector<int> mthreadsQLenPerThread; //Q
+	//std::vector<int> mthreadsReqsPerThread; //X -- Only reads for now
+    
     /**
      * The controller's main read and write queues
      */
@@ -629,6 +688,11 @@ class SimpleDRAM : public AbstractMemory
     Stats::Formula Mi;
     Stats::Formula thinkingTime;
     Stats::Formula microThreads;
+
+    //Prodromou: for mThreads
+    Stats::AverageVector mthreadsAvgQLenPerThread;
+    Stats::AverageVector mthreadsReqsPerThread;
+    Stats::AverageVector mthreadsAvgMemAccTimePerThread;
 
     /** @todo this is a temporary workaround until the 4-phase code is
      * committed. upstream caches needs this packet until true is returned, so

@@ -112,6 +112,7 @@ SimpleDRAM::SimpleDRAM(const SimpleDRAMParams* p) :
     if (memSchedPolicy == Enums::fcfs) cout<<"Policy: FCFS"<<endl;
     if (memSchedPolicy == Enums::frfcfs) cout<<"Policy: FRFCFS"<<endl;
     if (memSchedPolicy == Enums::parbs) cout<<"Policy: PARBS"<<endl;
+    if (memSchedPolicy == Enums::mthreads) cout<<"Policy: mThreads"<<endl;
 }
 
 void
@@ -184,6 +185,10 @@ SimpleDRAM::init()
 	lastQuantumTime = 0;
 	clusterThresh = 4.0 / numOfThreads; //Paper suggests 2/N - 6/N
 
+    }
+
+    if (memSchedPolicy == Enums::mthreads) {
+	mthreadsReqsServiced = vector<int>(numOfThreads, 0);
     }
 }
 
@@ -407,6 +412,15 @@ SimpleDRAM::addToReadQueue(PacketPtr pkt, unsigned int pktCount)
 			latSensRead.push_back(dram_pkt);
 		    }
 		    else bwSensRead.push_back(dram_pkt);
+		}
+	    }
+
+	    //Prodromou: Update stats for mThreads
+	    if (memSchedPolicy == Enums::mthreads) {
+		int threadNum = dram_pkt->thread;
+		if (threadNum != -1) {
+		    mthreadsReqsPerThread[threadNum]++;
+		    mthreadsAvgQLenPerThread[threadNum]++;
 		}
 	    }
 
@@ -883,6 +897,16 @@ SimpleDRAM::processRespondEvent()
         accessAndRespond(dram_pkt->pkt, frontendLatency + backendLatency);
     }
 
+    //Prodromou: Request Serviced. Update stats for mthreads
+    if (memSchedPolicy == Enums::mthreads) {
+	int threadNum = dram_pkt->thread;
+	if (threadNum != -1) {
+	    mthreadsAvgMemAccTimePerThread[threadNum] += (dram_pkt->readyTime - dram_pkt->entryTime);
+	    mthreadsReqsServiced[threadNum]++;
+	    mthreadsAvgQLenPerThread[threadNum]--;
+	}
+    }
+
     delete respQueue.front();
     respQueue.pop_front();
 
@@ -960,6 +984,8 @@ SimpleDRAM::chooseNextWrite()
 	parbsNextWrite();
     } else if (memSchedPolicy == Enums::tcm) {
 	tcmNextWrite();
+    } else if (memSchedPolicy == Enums::mthreads) {
+	mthreadsNextWrite();
     }
     else
         panic("No scheduling policy chosen\n");
@@ -1020,6 +1046,8 @@ SimpleDRAM::chooseNextRead()
 	parbsNextRead();
     } else if (memSchedPolicy == Enums::tcm) {
 	tcmNextRead();
+    } else if (memSchedPolicy == Enums::mthreads) {
+	mthreadsNextRead();
     } else
         panic("no scheduling policy chosen!\n");
 
@@ -1597,6 +1625,89 @@ SimpleDRAM::tcmChooseFromLatCluster(bool isRead) {
     return chosenIndex;
 }
 
+void SimpleDRAM::mthreadsNextRead() {
+    //Prodromou: Find the next read request and place it 
+    //in front of the queue
+    int tableDimension = 20;
+    
+    std::vector<int> NPerThread(numOfThreads, 9999);
+    std::vector<int> threadPriority;
+
+    // For each thread
+    for (int threadNum=0; threadNum<numOfThreads; threadNum++) {
+	//Generate the table based on current RTT
+	//Should RTT be per thread?
+	float RTT = mthreadsAvgMemAccTimePerThread[threadNum].value();
+	mthreadsLookupTable = new LookupTable(tableDimension, RTT);
+
+	//Get the thread's search terms -- reads/time & avgQLen (X & Q)
+	float X = mthreadsReqsPerThread[threadNum].value();
+	float Q = mthreadsAvgQLenPerThread[threadNum].value();
+	
+	//Query for N and Z
+	pair<int,int> nAndZ = mthreadsLookupTable->searchFor(X,Q);
+	NPerThread[threadNum] = nAndZ.first;
+
+	//Delete LookupTable
+	delete(mthreadsLookupTable);
+    }
+
+    //Sort threads
+    for (int prio=0; prio<numOfThreads; prio++) {
+	int minN = 10000;
+	int minthread = -1;
+	for (int thread=0; thread<numOfThreads; thread++) {
+	    if (NPerThread[thread] < minN) {
+		minN = NPerThread[thread];
+		minthread = thread;
+	    }
+	}
+	threadPriority.push_back(minthread);
+	NPerThread[minthread] = 100000; // Make sure it's not selected again
+    }
+
+    //Search for RBHs in prioritized fashion
+    for (int j=0; j<numOfThreads; j++) {
+	int threadNum = threadPriority[j];
+	for (auto i = readQueue.begin(); i != readQueue.end() ; ++i) {
+	    DRAMPacket* dram_pkt = *i;
+	    const Bank& bank = dram_pkt->bank_ref;
+	    int currentThread = dram_pkt->thread;
+
+	    if (currentThread == threadNum) {
+		// check if it is a row hit
+		if (bank.openRow == dram_pkt->row) { //fr part
+		    DPRINTF(DRAM, "row buffer hit\n");
+		    readQueue.erase(i);
+		    readQueue.push_front(dram_pkt);
+		    return;
+		}
+	    }
+	}
+    }
+
+    //No RBHs found. Choose the first packet of the thread 
+    //with the highest priority
+    int threadNum = threadPriority[0];
+    for (auto i = readQueue.begin(); i != readQueue.end() ; ++i) {
+	DRAMPacket* dram_pkt = *i;
+	int currentThread = dram_pkt->thread;
+
+	if (currentThread == threadNum) {
+		readQueue.erase(i);
+		readQueue.push_front(dram_pkt);
+		return;
+	}
+    }
+}
+
+void SimpleDRAM::mthreadsNextWrite() {
+    //Prodromou: Find the next write request and place it 
+    // in front of the queue
+
+    // Do nothing for now?
+}
+
 void
 SimpleDRAM::accessAndRespond(PacketPtr pkt, Tick static_latency)
 {
@@ -1791,7 +1902,6 @@ SimpleDRAM::doDRAMAccess(DRAMPacket* dram_pkt)
 
     // Prodromou: Slow down accesses when flag is set
     if (slowdownAccesses) dram_pkt->readyTime += perAccessSlowdown;
-
 
     DPRINTF(DRAM, "Req %lld: curtick is %lld accessLat is %d " \
                   "readytime is %lld busbusyuntil is %lld. " \
@@ -2201,6 +2311,21 @@ SimpleDRAM::regStats()
 	.precision (2);
 
     microThreads = (avgRdQLen + avgWrQLen) - (Mi * thinkingTime);
+
+    mthreadsAvgQLenPerThread
+	.init(numOfThreads)
+	.name(name() + ".avgRdQLenPerThread")
+	.precision(6);
+
+    mthreadsReqsPerThread
+	.init (numOfThreads)
+	.name(name() + ".avgNumOfReqsPerThread")
+	.precision(6);
+
+    mthreadsAvgMemAccTimePerThread
+	.init (numOfThreads)
+	.name (name() + ".avgMemAccLatPerThread")
+	.precision(2);
 }
 
 void
@@ -2249,6 +2374,108 @@ SimpleDRAM::drain(DrainManager *dm)
         setDrainState(Drainable::Drained);
     return count;
 }
+
+//Prodromou: Implementation of LookupTable class
+SimpleDRAM::LookupTable::LookupTable(int dim_limit, float rtt) {
+    Rtt = rtt; //For mcf_10ns at lat_tolerance/individual_analysis
+    dimension_limit = dim_limit;
+
+    table.reserve(dimension_limit);
+
+    for (int i=0; i<dimension_limit; i++) {
+        table[i].reserve(dimension_limit);
+    }
+
+    //Initialize the lookup table
+    for (int i=0; i<dimension_limit; i++) {
+        for (int j=0; j<dimension_limit; j++ ) {
+            exactMVA(i,j);
+        }
+    }
+}
+
+float
+SimpleDRAM::LookupTable::getNStep() {
+    return 1;
+}
+
+float
+SimpleDRAM::LookupTable::getZStep() {
+    return 1;
+}
+
+void
+SimpleDRAM::LookupTable::exactMVA(int N_dim, int Z_dim) {
+
+    //Translated table dimensions
+    table[N_dim][Z_dim].valid = true;
+
+    float X=0; //throughput
+    float L=0; // Queue Length
+
+    float N = N_dim * getNStep();
+    float Z = Z_dim * getZStep();
+
+    for (int n = 0; n<N; n++) {
+
+        //Set all station delays
+        //We only have one so we are using Rtt
+
+        //Set throughput
+        //cout <<"X = "<<n<<" / ("<<Z<<" + "<<Rtt<<")"<<endl;
+        X = ((float)(n)) / (Z + Rtt);
+
+        //Set Queue length
+        L = X * Rtt;
+    }
+
+    table[N_dim][Z_dim].throughput = X;
+    table[N_dim][Z_dim].Qlen = L;
+}
+
+void
+SimpleDRAM::LookupTable::printTable() {
+    for (int i=0; i<dimension_limit; i++) {
+        for (int j=0; j<dimension_limit; j++) {
+            cout << "("<<table[i][j].throughput<<","<<table[i][j].Qlen<<")\t";
+        }
+        cout<<endl;
+    }
+}
+
+pair<int,int>
+SimpleDRAM::LookupTable::searchFor (float X, float Q) {
+    float min_error = 1000000;
+    float error;
+    float N,Z;
+
+    //Brute-force through array and find the tuple that minimizes the error
+    for (int i=0; i<dimension_limit; i++) {
+        for (int j=0; j<dimension_limit; j++) {
+            float Xdiff = (X - table[i][j].throughput);
+            float Qdiff = (Q - table[i][j].Qlen);
+            error = (Xdiff * Xdiff) + (Qdiff * Qdiff);
+
+            if (error < min_error) {
+                min_error = error;
+                N = i;
+                Z = j;
+            }
+        }
+    }
+
+    //cout << "Min error: "<<min_error<<endl;
+    pair <int, int> p (N,Z);
+    return p;
+
+}
+
+void
+SimpleDRAM::LookupTable::printEntry(int N, int Z) {
+    cout <<"("<<table[N][Z].throughput<<","<<table[N][Z].Qlen<<")"<<endl;
+}
+
+//Prodromou: End of LookupTable class implementation
 
 SimpleDRAM::MemoryPort::MemoryPort(const std::string& name, SimpleDRAM& _memory)
     : QueuedSlavePort(name, &_memory, queue), queue(_memory, *this),
