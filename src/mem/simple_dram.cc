@@ -2380,10 +2380,12 @@ SimpleDRAM::LookupTable::LookupTable(int dim_limit, float rtt) {
     Rtt = rtt; //For mcf_10ns at lat_tolerance/individual_analysis
     dimension_limit = dim_limit;
 
-    table.reserve(dimension_limit);
+    //table.reserve(dimension_limit);
+    table = vector<vector<LookupTableEntry> >(dimension_limit);
 
     for (int i=0; i<dimension_limit; i++) {
-        table[i].reserve(dimension_limit);
+        //table[i].reserve(dimension_limit);
+	table[i] = vector<LookupTableEntry>(dimension_limit);
     }
 
     //Initialize the lookup table
