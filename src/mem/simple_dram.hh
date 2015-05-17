@@ -693,6 +693,7 @@ class SimpleDRAM : public AbstractMemory
     Stats::AverageVector mthreadsAvgQLenPerThread;
     Stats::AverageVector mthreadsReqsPerThread;
     Stats::AverageVector mthreadsAvgMemAccTimePerThread;
+    Stats::Vector2d perThreadNPdf;
 
     /** @todo this is a temporary workaround until the 4-phase code is
      * committed. upstream caches needs this packet until true is returned, so

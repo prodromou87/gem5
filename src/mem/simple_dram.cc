@@ -187,9 +187,9 @@ SimpleDRAM::init()
 
     }
 
-    if (memSchedPolicy == Enums::mthreads) {
+    //if (memSchedPolicy == Enums::mthreads) {
 	mthreadsReqsServiced = vector<int>(numOfThreads, 0);
-    }
+    //}
 }
 
 void
@@ -416,13 +416,14 @@ SimpleDRAM::addToReadQueue(PacketPtr pkt, unsigned int pktCount)
 	    }
 
 	    //Prodromou: Update stats for mThreads
-	    if (memSchedPolicy == Enums::mthreads) {
+	    //Do it for every policy - not just mthreads - for statistics
+	    //if (memSchedPolicy == Enums::mthreads) {
 		int threadNum = dram_pkt->thread;
 		if (threadNum != -1) {
 		    mthreadsReqsPerThread[threadNum]++;
 		    mthreadsAvgQLenPerThread[threadNum]++;
 		}
-	    }
+	    //}
 
             // Update stats
             uint32_t bank_id = banksPerRank * dram_pkt->rank + dram_pkt->bank;
@@ -898,14 +899,13 @@ SimpleDRAM::processRespondEvent()
     }
 
     //Prodromou: Request Serviced. Update stats for mthreads
-    if (memSchedPolicy == Enums::mthreads) {
+    // Do this for all policies - statistics
 	int threadNum = dram_pkt->thread;
 	if (threadNum != -1) {
 	    mthreadsAvgMemAccTimePerThread[threadNum] += (dram_pkt->readyTime - dram_pkt->entryTime);
 	    mthreadsReqsServiced[threadNum]++;
 	    mthreadsAvgQLenPerThread[threadNum]--;
 	}
-    }
 
     delete respQueue.front();
     respQueue.pop_front();
@@ -996,6 +996,29 @@ SimpleDRAM::chooseNextWrite()
 bool
 SimpleDRAM::chooseNextRead()
 {
+
+    //Prodromou: Calculate N for every mechanism so it's displayed 
+    //in the statistics
+    int tableDimension = 20; // CAREFUL: This is hardcoded at two places
+    // For each thread
+    for (int threadNum=0; threadNum<numOfThreads; threadNum++) {
+	//Generate the table based on current RTT
+	//Should RTT be per thread?
+	float RTT = mthreadsAvgMemAccTimePerThread[threadNum].value();
+	mthreadsLookupTable = new LookupTable(tableDimension, RTT);
+
+	//Get the thread's search terms -- reads/time & avgQLen (X & Q)
+	float X = mthreadsReqsPerThread[threadNum].value();
+	float Q = mthreadsAvgQLenPerThread[threadNum].value();
+
+	//Query for N and Z
+	pair<int,int> nAndZ = mthreadsLookupTable->searchFor(X,Q);
+	perThreadNPdf[threadNum][nAndZ.first]++;
+
+	//Delete LookupTable
+	delete(mthreadsLookupTable);
+    }
+
     // this method does the arbitration between read requests. the
     // chosen packet is simply moved to the head of the queue. the
     // other methods know that this is the place to look. for example,
@@ -1647,6 +1670,7 @@ void SimpleDRAM::mthreadsNextRead() {
 	//Query for N and Z
 	pair<int,int> nAndZ = mthreadsLookupTable->searchFor(X,Q);
 	NPerThread[threadNum] = nAndZ.first;
+	perThreadNPdf[threadNum][nAndZ.first]++;
 
 	//Delete LookupTable
 	delete(mthreadsLookupTable);
@@ -2326,6 +2350,12 @@ SimpleDRAM::regStats()
 	.init (numOfThreads)
 	.name (name() + ".avgMemAccLatPerThread")
 	.precision(2);
+
+    perThreadNPdf
+	.init(numOfThreads, 50)
+	.name(name() + ".perThreadNPdf")
+	.desc("Pdf distribution of the number of customers per thread");
+
 }
 
 void
