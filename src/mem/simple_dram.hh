@@ -690,9 +690,9 @@ class SimpleDRAM : public AbstractMemory
     Stats::Formula microThreads;
 
     //Prodromou: for mThreads
-    Stats::AverageVector mthreadsAvgQLenPerThread;
-    Stats::AverageVector mthreadsReqsPerThread;
-    Stats::AverageVector mthreadsAvgMemAccTimePerThread;
+    Stats::Vector mthreadsAvgQLenPerThread;
+    Stats::Vector mthreadsReqsPerThread;
+    Stats::Vector mthreadsAvgMemAccTimePerThread;
     Stats::Vector2d perThreadNPdf;
 
     /** @todo this is a temporary workaround until the 4-phase code is

@@ -905,6 +905,9 @@ SimpleDRAM::processRespondEvent()
 	    mthreadsAvgMemAccTimePerThread[threadNum] += (dram_pkt->readyTime - dram_pkt->entryTime);
 	    mthreadsReqsServiced[threadNum]++;
 	    mthreadsAvgQLenPerThread[threadNum]--;
+	    //cout<<"Added "<<dram_pkt->readyTime - dram_pkt->entryTime<<endl;
+	    //cout<<"Reported average: "<<mthreadsAvgMemAccTimePerThread[threadNum].value() / mthreadsReqsServiced[threadNum]<<endl;
+	    //cout<<"Avg Q Length: "<<mthreadsAvgQLenPerThread[threadNum].value()<<endl;
 	}
 
     delete respQueue.front();
@@ -1004,16 +1007,19 @@ SimpleDRAM::chooseNextRead()
     for (int threadNum=0; threadNum<numOfThreads; threadNum++) {
 	//Generate the table based on current RTT
 	//Should RTT be per thread?
-	float RTT = mthreadsAvgMemAccTimePerThread[threadNum].value();
+	float RTT = mthreadsAvgMemAccTimePerThread[threadNum].value() / mthreadsReqsServiced[threadNum];
 	mthreadsLookupTable = new LookupTable(tableDimension, RTT);
 
 	//Get the thread's search terms -- reads/time & avgQLen (X & Q)
-	float X = mthreadsReqsPerThread[threadNum].value();
+	float X = mthreadsReqsPerThread[threadNum].value() / (curTick() / 1000000000);
 	float Q = mthreadsAvgQLenPerThread[threadNum].value();
+
+	//cout<<"RTT: "<<RTT<<", X: "<<X<<", Q: "<<Q;
 
 	//Query for N and Z
 	pair<int,int> nAndZ = mthreadsLookupTable->searchFor(X,Q);
 	perThreadNPdf[threadNum][nAndZ.first]++;
+	//cout <<", N: "<<nAndZ.first<<endl;
 
 	//Delete LookupTable
 	delete(mthreadsLookupTable);
@@ -2479,7 +2485,8 @@ pair<int,int>
 SimpleDRAM::LookupTable::searchFor (float X, float Q) {
     float min_error = 1000000;
     float error;
-    float N,Z;
+    float N=0;
+    float Z=0;
 
     //Brute-force through array and find the tuple that minimizes the error
     for (int i=0; i<dimension_limit; i++) {
