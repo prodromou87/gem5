@@ -45,11 +45,13 @@
 #include "debug/Drain.hh"
 #include "debug/DRAM.hh"
 #include "debug/DRAMWR.hh"
+#include "debug/MTHREADS.hh"
 #include "mem/simple_dram.hh"
 #include "sim/system.hh"
 
 #include <algorithm>
 #include <set>
+#include <sstream>
 
 using namespace std;
 
@@ -112,7 +114,9 @@ SimpleDRAM::SimpleDRAM(const SimpleDRAMParams* p) :
     if (memSchedPolicy == Enums::fcfs) cout<<"Policy: FCFS"<<endl;
     if (memSchedPolicy == Enums::frfcfs) cout<<"Policy: FRFCFS"<<endl;
     if (memSchedPolicy == Enums::parbs) cout<<"Policy: PARBS"<<endl;
+    if (memSchedPolicy == Enums::tcm) cout<<"Policy: TCM"<<endl;
     if (memSchedPolicy == Enums::mthreads) cout<<"Policy: mThreads"<<endl;
+    if (memSchedPolicy == Enums::mstatic) cout<<"Policy: Mstatic"<<endl;
 }
 
 void
@@ -989,6 +993,8 @@ SimpleDRAM::chooseNextWrite()
 	tcmNextWrite();
     } else if (memSchedPolicy == Enums::mthreads) {
 	mthreadsNextWrite();
+    } else if (memSchedPolicy == Enums::mstatic) {
+	mStaticNextWrite();
     }
     else
         panic("No scheduling policy chosen\n");
@@ -1000,6 +1006,7 @@ bool
 SimpleDRAM::chooseNextRead()
 {
 
+
     //Prodromou: Calculate N for every mechanism so it's displayed 
     //in the statistics
     int tableDimension = 20; // CAREFUL: This is hardcoded at two places
@@ -1009,17 +1016,20 @@ SimpleDRAM::chooseNextRead()
 	//Should RTT be per thread?
 	float RTT = mthreadsAvgMemAccTimePerThread[threadNum].value() / mthreadsReqsServiced[threadNum];
 	mthreadsLookupTable = new LookupTable(tableDimension, RTT);
+	
+	DPRINTF (MTHREADS, mthreadsLookupTable->printTable().c_str());
 
 	//Get the thread's search terms -- reads/time & avgQLen (X & Q)
 	float X = mthreadsReqsPerThread[threadNum].value() / (curTick() / 1000000000);
 	float Q = mthreadsAvgQLenPerThread[threadNum].value();
 
-	//cout<<"RTT: "<<RTT<<", X: "<<X<<", Q: "<<Q;
+	DPRINTF(MTHREADS, "RTT: %.3f, X: %.3f, Q: %.3f\n", RTT, X, Q);
 
 	//Query for N and Z
 	pair<int,int> nAndZ = mthreadsLookupTable->searchFor(X,Q);
 	perThreadNPdf[threadNum][nAndZ.first]++;
 	//cout <<", N: "<<nAndZ.first<<endl;
+	DPRINTF (MTHREADS, "Returned: %d, %d\n", nAndZ.first, nAndZ.second);
 
 	//Delete LookupTable
 	delete(mthreadsLookupTable);
@@ -1077,6 +1087,8 @@ SimpleDRAM::chooseNextRead()
 	tcmNextRead();
     } else if (memSchedPolicy == Enums::mthreads) {
 	mthreadsNextRead();
+    } else if (memSchedPolicy == Enums::mstatic) {
+	mStaticNextRead();
     } else
         panic("no scheduling policy chosen!\n");
 
@@ -1125,6 +1137,78 @@ SimpleDRAM::parbsNextRead() {
 
     //done. decrement the number of batched instructions
     batchedInsts--;
+}
+
+void
+SimpleDRAM::mStaticNextWrite() {
+    // Thread order for mcf,libquantum,GemsFDTD,xalancbmk: 1,3,2,0
+   
+    int threadPriority[4] = {1,3,2,0};
+ 
+    for (auto i = writeQueue.begin(); i != writeQueue.end() ; ++i) {
+	DRAMPacket* dram_pkt = *i;
+	const Bank& bank = dram_pkt->bank_ref;
+
+	// check if it is a row hit
+	if (bank.openRow == dram_pkt->row) { //fr part
+	    DPRINTF(DRAM, "row buffer hit\n");
+	    writeQueue.erase(i);
+	    writeQueue.push_front(dram_pkt);
+	    return;
+	}
+    }
+
+    //No RBHs found. Choose the first packet of the thread 
+    //with the highest priority
+    for (int j=0; j<numOfThreads; j++) {
+        int threadNum = threadPriority[j];
+        for (auto i = writeQueue.begin(); i != writeQueue.end() ; ++i) {
+            DRAMPacket* dram_pkt = *i;
+            int currentThread = dram_pkt->thread;
+
+            if (currentThread == threadNum) {
+                    writeQueue.erase(i);
+                    writeQueue.push_front(dram_pkt);
+                    return;
+            }
+        }
+    } 
+}
+
+void
+SimpleDRAM::mStaticNextRead() {
+    // Thread order for mcf,libquantum,GemsFDTD,xalancbmk: 1,3,2,0
+   
+    int threadPriority[4] = {1,3,2,0};
+ 
+    for (auto i = readQueue.begin(); i != readQueue.end() ; ++i) {
+        DRAMPacket* dram_pkt = *i;
+        const Bank& bank = dram_pkt->bank_ref;
+
+        // check if it is a row hit
+        if (bank.openRow == dram_pkt->row) { //fr part
+            DPRINTF(DRAM, "row buffer hit\n");
+            readQueue.erase(i);
+            readQueue.push_front(dram_pkt);
+            return;
+        }
+    }
+
+    //No RBHs found. Choose the first packet of the thread 
+    //with the highest priority
+    for (int j=0; j<numOfThreads; j++) {
+        int threadNum = threadPriority[j];
+        for (auto i = readQueue.begin(); i != readQueue.end() ; ++i) {
+            DRAMPacket* dram_pkt = *i;
+            int currentThread = dram_pkt->thread;
+
+            if (currentThread == threadNum) {
+                    readQueue.erase(i);
+                    readQueue.push_front(dram_pkt);
+                    return;
+            }
+        }
+    } 
 }
 
 void 
@@ -1718,15 +1802,17 @@ void SimpleDRAM::mthreadsNextRead() {
 
     //No RBHs found. Choose the first packet of the thread 
     //with the highest priority
-    int threadNum = threadPriority[0];
-    for (auto i = readQueue.begin(); i != readQueue.end() ; ++i) {
-	DRAMPacket* dram_pkt = *i;
-	int currentThread = dram_pkt->thread;
+    for (int j=0; j<numOfThreads; j++) {
+	int threadNum = threadPriority[j];
+	for (auto i = readQueue.begin(); i != readQueue.end() ; ++i) {
+	    DRAMPacket* dram_pkt = *i;
+	    int currentThread = dram_pkt->thread;
 
-	if (currentThread == threadNum) {
-		readQueue.erase(i);
-		readQueue.push_front(dram_pkt);
-		return;
+	    if (currentThread == threadNum) {
+		    readQueue.erase(i);
+		    readQueue.push_front(dram_pkt);
+		    return;
+	    }
 	}
     }
 }
@@ -2425,8 +2511,8 @@ SimpleDRAM::LookupTable::LookupTable(int dim_limit, float rtt) {
     }
 
     //Initialize the lookup table
-    for (int i=0; i<dimension_limit; i++) {
-        for (int j=0; j<dimension_limit; j++ ) {
+    for (int i=1; i<dimension_limit; i++) {
+        for (int j=1; j<dimension_limit; j++ ) {
             exactMVA(i,j);
         }
     }
@@ -2439,7 +2525,7 @@ SimpleDRAM::LookupTable::getNStep() {
 
 float
 SimpleDRAM::LookupTable::getZStep() {
-    return 1;
+    return 1000;
 }
 
 void
@@ -2471,14 +2557,19 @@ SimpleDRAM::LookupTable::exactMVA(int N_dim, int Z_dim) {
     table[N_dim][Z_dim].Qlen = L;
 }
 
-void
+string
 SimpleDRAM::LookupTable::printTable() {
+    stringstream ss;
+    ss.precision(3);
+    ss << endl;
     for (int i=0; i<dimension_limit; i++) {
         for (int j=0; j<dimension_limit; j++) {
-            cout << "("<<table[i][j].throughput<<","<<table[i][j].Qlen<<")\t";
+            ss << fixed << "("<<table[i][j].throughput<<","<<table[i][j].Qlen<<")\t";
         }
-        cout<<endl;
+	ss << endl;
     }
+    string s = ss.str();
+    return s;
 }
 
 pair<int,int>
@@ -2491,6 +2582,7 @@ SimpleDRAM::LookupTable::searchFor (float X, float Q) {
     //Brute-force through array and find the tuple that minimizes the error
     for (int i=0; i<dimension_limit; i++) {
         for (int j=0; j<dimension_limit; j++) {
+	    if (!table[i][j].valid) continue;
             float Xdiff = (X - table[i][j].throughput);
             float Qdiff = (Q - table[i][j].Qlen);
             error = (Xdiff * Xdiff) + (Qdiff * Qdiff);

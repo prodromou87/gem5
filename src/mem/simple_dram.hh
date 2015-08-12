@@ -129,11 +129,12 @@ class SimpleDRAM : public AbstractMemory
 
 	    void exactMVA(int N_dim, int Z_dim);
 
-	    void printTable();
+	    string printTable();
 
 	    pair<int,int> searchFor( float X, float Q);
 
 	    void printEntry (int N, int Z);
+	    string name() {return "";};
 	};
 
     LookupTable *mthreadsLookupTable;
@@ -520,6 +521,9 @@ class SimpleDRAM : public AbstractMemory
     //Prodromou: mthreads functions
     void mthreadsNextRead();
     void mthreadsNextWrite();
+
+    void mStaticNextRead();
+    void mStaticNextWrite();
 
     //Prodromou: Structures needed for mThreads Scheduler
     std::vector<int> mthreadsReqsServiced; //Also RTT

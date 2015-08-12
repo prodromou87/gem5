@@ -82,6 +82,11 @@ DebugFlag('Bridge')
 DebugFlag('CommMonitor')
 DebugFlag('DRAM')
 DebugFlag('DRAMWR')
+
+#Prodromou
+DebugFlag('MTHREADS')
+#Prodromou
+
 DebugFlag('LLSC')
 DebugFlag('MMU')
 DebugFlag('MemoryAccess')
